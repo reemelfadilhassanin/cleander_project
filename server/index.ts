@@ -1,4 +1,8 @@
-import express, { type Request, Response, NextFunction } from 'express';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
 import { registerRoutes } from './routes';
 import { setupVite, serveStatic, log } from './vite';
 import 'dotenv/config';
@@ -6,20 +10,39 @@ import cors from 'cors';
 import { setupAuth } from './auth';
 
 const app = express();
+
+// ✅ CORS setup: use env variable or allow all (for safe testing)
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: (origin, callback) => {
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
+
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.includes('*')
+      ) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
 
+// ✅ Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// ✅ Authentication setup
 setupAuth(app);
+
+// ✅ Request logging for API routes
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: any;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -47,37 +70,34 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // ✅ Register API routes
   const server = await registerRoutes(app);
 
+  // ✅ Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
-
     res.status(status).json({ message });
-    throw err;
+    console.error(err); // Keep the log; don't throw in production
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // ✅ Dev: serve frontend with Vite middleware
   if (app.get('env') === 'development') {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // ✅ Prod: serve prebuilt frontend from Vite's output (dist/public)
+    serveStatic(app); // Serve from dist/public
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // ✅ Always use port 5000 (Render requires this)
+  const port = process.env.PORT || 5000;
   server.listen(
     {
-      port,
-      host: '0.0.0.0',
-      reusePort: true,
+      port: Number(port),
+      host: '0.0.0.0', // Required for Render public access
     },
     () => {
-      log(`serving on port ${port}`);
+      log(`🚀 Server running on http://0.0.0.0:${port}`);
     }
   );
 })();
