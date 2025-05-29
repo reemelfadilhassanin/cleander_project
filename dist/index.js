@@ -1138,6 +1138,8 @@ import react from "@vitejs/plugin-react";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
 var vite_config_default = defineConfig({
+  base: "./",
+  // ✅ ضروري للإنتاج على Render
   plugins: [react()],
   resolve: {
     alias: {
@@ -1147,7 +1149,10 @@ var vite_config_default = defineConfig({
     }
   },
   server: {
-    port: 3e3
+    port: 3e3,
+    proxy: {
+      "/api": "http://localhost:5000"
+    }
   },
   build: {
     outDir: "dist",
