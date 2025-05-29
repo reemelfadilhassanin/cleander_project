@@ -1074,39 +1074,40 @@ async function registerRoutes(app2) {
 // server/vite.ts
 import express from "express";
 import fs from "fs";
-import path2 from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+import path from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
+import { dirname as dirname2 } from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // client/vite.config.ts
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = dirname(__filename);
 var vite_config_default = defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
-      // 👈 هذا هو المهم الآن
-      "@shared": path.resolve(__dirname, "../shared"),
-      "@assets": path.resolve(__dirname, "attached_assets")
+      "@": resolve(__dirname, "src"),
+      "@shared": resolve(__dirname, "../shared"),
+      "@assets": resolve(__dirname, "attached_assets")
     }
   },
   server: {
     port: 3e3
   },
   build: {
-    outDir: path.resolve(__dirname, "../dist/public"),
-    // خروج في مجلد خارج client
+    outDir: resolve(__dirname, "../dist/public"),
     emptyOutDir: true
   }
 });
 
 // server/vite.ts
 import { nanoid } from "nanoid";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname2 = dirname(__filename);
+var __filename2 = fileURLToPath2(import.meta.url);
+var __dirname2 = dirname2(__filename2);
 var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -1140,7 +1141,7 @@ async function setupVite(app2, server) {
   app2.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path2.resolve(
+      const clientTemplate = path.resolve(
         __dirname2,
         "..",
         "client",
@@ -1160,7 +1161,7 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path2.resolve(__dirname2, "public");
+  const distPath = path.resolve(__dirname2, "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -1168,7 +1169,7 @@ function serveStatic(app2) {
   }
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
 
@@ -1194,7 +1195,7 @@ app.use(express2.urlencoded({ extended: false }));
 setupAuth(app);
 app.use((req, res, next) => {
   const start = Date.now();
-  const path3 = req.path;
+  const path2 = req.path;
   let capturedJsonResponse;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -1203,8 +1204,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
+    if (path2.startsWith("/api")) {
+      let logLine = `${req.method} ${path2} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
