@@ -1151,7 +1151,7 @@ var vite_config_default = defineConfig({
   server: {
     port: 3e3,
     proxy: {
-      "/api": "http://localhost:5000"
+      "/api": "https://cleander-project-server.onrender.com"
     }
   },
   build: {
