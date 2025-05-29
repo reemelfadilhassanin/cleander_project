@@ -1179,6 +1179,7 @@ import cors from "cors";
 var app = express2();
 var allowedOrigins = [
   "https://cleander-project-front.onrender.com",
+  "https://cleander-project-server.onrender.com",
   "http://localhost:3000"
 ];
 console.log("\u2705 Allowed CORS Origins:", allowedOrigins);
