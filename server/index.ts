@@ -14,8 +14,10 @@ const app = express();
 // ✅ Define allowed CORS origins
 const allowedOrigins = [
   'https://cleander-project-front.onrender.com',
-  'http://localhost:3000',
+  'https://cleander-project-server.onrender.com',
+  'http://localhost:3000'
 ];
+
 
 // ✅ Debug CORS origins
 console.log('✅ Allowed CORS Origins:', allowedOrigins);
