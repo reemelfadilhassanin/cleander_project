@@ -1091,7 +1091,7 @@ var vite_config_default = defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
-      "@shared": resolve(__dirname, "../shared"),
+      "@shared": resolve(__dirname, "shared"),
       "@assets": resolve(__dirname, "attached_assets")
     }
   },
@@ -1177,14 +1177,20 @@ function serveStatic(app2) {
 import "dotenv/config";
 import cors from "cors";
 var app = express2();
+var allowedOrigins = [
+  "https://cleander-project-front.onrender.com",
+  "http://localhost:3000"
+];
+console.log("\u2705 Allowed CORS Origins:", allowedOrigins);
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [];
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
-        return callback(null, true);
+      console.log("\u{1F50D} Request Origin:", origin);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
       } else {
-        return callback(new Error("Not allowed by CORS"));
+        console.warn("\u26D4 Blocked by CORS:", origin);
+        callback(null, false);
       }
     },
     credentials: true
@@ -1223,7 +1229,7 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
-    console.error(err);
+    console.error("\u{1F525} Unhandled Error:", err);
   });
   if (app.get("env") === "development") {
     await setupVite(app, server);
@@ -1235,7 +1241,6 @@ app.use((req, res, next) => {
     {
       port: Number(port),
       host: "0.0.0.0"
-      // Required for Render public access
     },
     () => {
       log(`\u{1F680} Server running on http://0.0.0.0:${port}`);

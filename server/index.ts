@@ -1,29 +1,42 @@
-
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
 import { registerRoutes } from './routes';
 import { setupVite, serveStatic, log } from './vite';
-import 'dotenv/config'; // يجب أن يكون أول شيء
+import 'dotenv/config'; // Load environment variables first
 import cors from 'cors';
 import { setupAuth } from './auth';
 
 const app = express();
-const allowedOrigins = [
-  'https://cleander-project-front.onrender.com', 
-  'http://localhost:3000' 
-];
-// ✅ Debug CORS origins
-console.log('✅ Loaded CORS_ORIGIN:', process.env.CORS_ORIGIN);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+// ✅ Define allowed CORS origins
+const allowedOrigins = [
+  'https://cleander-project-front.onrender.com',
+  'http://localhost:3000',
+];
+
+// ✅ Debug CORS origins
+console.log('✅ Allowed CORS Origins:', allowedOrigins);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      console.log('🔍 Request Origin:', origin);
+
+      // Allow requests with no origin (like curl or mobile apps)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn('⛔ Blocked by CORS:', origin);
+        callback(null, false); // Reject without throwing an error
+      }
+    },
+    credentials: true,
+  })
+);
+
 // ✅ Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -65,15 +78,15 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // ✅ Error handler
+  // ✅ Error handler (for all uncaught middleware errors)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
     res.status(status).json({ message });
-    console.error(err);
+    console.error('🔥 Unhandled Error:', err);
   });
 
-  // ✅ Serve frontend
+  // ✅ Serve frontend (via Vite in dev or static in prod)
   if (app.get('env') === 'development') {
     await setupVite(app, server);
   } else {
