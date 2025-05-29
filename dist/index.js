@@ -1075,45 +1075,38 @@ async function registerRoutes(app2) {
 import express from "express";
 import fs from "fs";
 import path2 from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
-// vite.config.ts
+// client/vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { fileURLToPath } from "url";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
 var vite_config_default = defineConfig({
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
-      await import("@replit/vite-plugin-cartographer").then(
-        (m) => m.cartographer()
-      )
-    ] : []
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
-      "@shared": path.resolve(__dirname, "shared"),
+      "@": path.resolve(__dirname, "src"),
+      // 👈 هذا هو المهم الآن
+      "@shared": path.resolve(__dirname, "../shared"),
       "@assets": path.resolve(__dirname, "attached_assets")
     }
   },
-  root: path.resolve(__dirname, "client"),
-  build: {
-    outDir: path.resolve(__dirname, "dist/public"),
-    emptyOutDir: true
-  },
   server: {
     port: 3e3
+  },
+  build: {
+    outDir: path.resolve(__dirname, "../dist/public"),
+    // خروج في مجلد خارج client
+    emptyOutDir: true
   }
 });
 
 // server/vite.ts
 import { nanoid } from "nanoid";
+var __filename = fileURLToPath(import.meta.url);
+var __dirname2 = dirname(__filename);
 var viteLogger = createLogger();
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
@@ -1148,7 +1141,7 @@ async function setupVite(app2, server) {
     const url = req.originalUrl;
     try {
       const clientTemplate = path2.resolve(
-        import.meta.dirname,
+        __dirname2,
         "..",
         "client",
         "index.html"
@@ -1167,7 +1160,7 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
+  const distPath = path2.resolve(__dirname2, "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -1185,7 +1178,14 @@ import cors from "cors";
 var app = express2();
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: (origin, callback) => {
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [];
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true
   })
 );
@@ -1195,7 +1195,7 @@ setupAuth(app);
 app.use((req, res, next) => {
   const start = Date.now();
   const path3 = req.path;
-  let capturedJsonResponse = void 0;
+  let capturedJsonResponse;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
@@ -1222,22 +1222,22 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
-    throw err;
+    console.error(err);
   });
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
-  const port = 5e3;
+  const port = process.env.PORT || 5e3;
   server.listen(
     {
-      port,
-      host: "0.0.0.0",
-      reusePort: true
+      port: Number(port),
+      host: "0.0.0.0"
+      // Required for Render public access
     },
     () => {
-      log(`serving on port ${port}`);
+      log(`\u{1F680} Server running on http://0.0.0.0:${port}`);
     }
   );
 })();
