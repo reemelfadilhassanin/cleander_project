@@ -109,6 +109,70 @@ const generateCalendarMonth = (
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
+  app.get('/api/age-calculator', (req, res) => {
+    const { birthDate } = req.query;
+
+    if (!birthDate || typeof birthDate !== 'string') {
+      return res.status(400).json({ message: 'يرجى توفير تاريخ الميلاد' });
+    }
+
+    const birth = new Date(birthDate);
+    const now = new Date();
+
+    if (isNaN(birth.getTime())) {
+      return res.status(400).json({ message: 'تاريخ الميلاد غير صالح' });
+    }
+
+    // حساب العمر بالتقويم الميلادي
+    let gYears = now.getFullYear() - birth.getFullYear();
+    let gMonths = now.getMonth() - birth.getMonth();
+    let gDays = now.getDate() - birth.getDate();
+
+    if (gDays < 0) {
+      gMonths -= 1;
+      gDays += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    }
+    if (gMonths < 0) {
+      gYears -= 1;
+      gMonths += 12;
+    }
+
+    // تحويل الميلاد والتاريخ الحالي إلى هجري (تقريبي باستخدام وظائف موجودة عندك)
+    const hijriBirth = estimateHijriFromGregorian(
+      birth.getDate(),
+      birth.getMonth() + 1,
+      birth.getFullYear()
+    );
+
+    const hijriNow = estimateHijriFromGregorian(
+      now.getDate(),
+      now.getMonth() + 1,
+      now.getFullYear()
+    );
+
+    let hYears = hijriNow.year - hijriBirth.year;
+    let hMonths = hijriNow.month - hijriBirth.month;
+    let hDays = hijriNow.day - hijriBirth.day;
+
+    if (hDays < 0) {
+      hMonths -= 1;
+      hDays += 30; // تقدير تقريبي لأيام الشهر الهجري
+    }
+    if (hMonths < 0) {
+      hYears -= 1;
+      hMonths += 12;
+    }
+
+    res.json({
+      gregorianYears: gYears,
+      gregorianMonths: gMonths,
+      gregorianDays: gDays,
+      hijriYears: hYears,
+      hijriMonths: hMonths,
+      hijriDays: hDays,
+    });
+  });
+
   // --- تقويم اليوم الحالي ---
   app.get('/api/calendar/today', (req, res) => {
     try {

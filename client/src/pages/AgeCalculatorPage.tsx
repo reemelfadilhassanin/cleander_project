@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { toArabicNumerals } from '@/lib/dateUtils';
 
 interface AgeResult {
@@ -22,28 +22,34 @@ export default function AgeCalculatorPage() {
   const calculateAge = async () => {
     if (!birthDate) {
       toast({
-        title: "أدخل تاريخ الميلاد",
-        description: "يرجى إدخال تاريخ ميلادك",
-        variant: "destructive",
+        title: 'أدخل تاريخ الميلاد',
+        description: 'يرجى إدخال تاريخ ميلادك',
+        variant: 'destructive',
       });
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/age-calculator?birthDate=${birthDate}`);
-      
+      const response = await fetch(
+        `/api/age-calculator?birthDate=${birthDate}`,
+        {
+          credentials: 'include',
+        }
+      );
+
       if (!response.ok) {
         throw new Error('خطأ في حساب العمر');
       }
-      
+
       const data = await response.json();
       setAgeResult(data);
     } catch (error) {
       toast({
-        title: "خطأ",
-        description: error instanceof Error ? error.message : "خطأ في حساب العمر",
-        variant: "destructive",
+        title: 'خطأ',
+        description:
+          error instanceof Error ? error.message : 'خطأ في حساب العمر',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -53,7 +59,7 @@ export default function AgeCalculatorPage() {
   return (
     <div className="container mx-auto py-6 px-4 flex flex-col items-center">
       <h1 className="text-2xl font-bold mb-6 text-center">حساب العمر</h1>
-      
+
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">أدخل تاريخ ميلادك</CardTitle>
@@ -71,29 +77,33 @@ export default function AgeCalculatorPage() {
               onChange={(e) => setBirthDate(e.target.value)}
             />
           </div>
-          
-          <Button 
-            onClick={calculateAge} 
-            className="w-full" 
+
+          <Button
+            onClick={calculateAge}
+            className="w-full"
             disabled={isLoading}
           >
             {isLoading ? 'جاري الحساب...' : 'احسب العمر'}
           </Button>
-          
+
           {ageResult && (
             <div className="mt-4 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-bold text-lg mb-2 text-center">نتيجة حساب العمر</h3>
-              
+              <h3 className="font-bold text-lg mb-2 text-center">
+                نتيجة حساب العمر
+              </h3>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="border-l p-2">
-                  <h4 className="font-semibold text-center">التقويم الميلادي</h4>
+                  <h4 className="font-semibold text-center">
+                    التقويم الميلادي
+                  </h4>
                   <p className="text-center">
                     {toArabicNumerals(ageResult.gregorianYears)} سنة،{' '}
                     {toArabicNumerals(ageResult.gregorianMonths)} شهر،{' '}
                     {toArabicNumerals(ageResult.gregorianDays)} يوم
                   </p>
                 </div>
-                
+
                 <div className="p-2">
                   <h4 className="font-semibold text-center">التقويم الهجري</h4>
                   <p className="text-center">

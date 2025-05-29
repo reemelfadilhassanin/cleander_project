@@ -11,16 +11,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@shared': resolve(__dirname, "shared"),
+      '@shared': resolve(__dirname, 'shared'),
       '@assets': resolve(__dirname, 'attached_assets'),
     },
   },
   server: {
     port: 3000,
+    proxy: {
+      '/api': 'http://localhost:5000',
+    },
   },
   build: {
-    outDir:'dist',
+    outDir: 'dist',
     emptyOutDir: true,
-   
   },
 });

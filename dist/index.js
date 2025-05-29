@@ -838,6 +838,57 @@ var generateCalendarMonth = (year, month, isHijri) => {
 };
 async function registerRoutes(app2) {
   setupAuth(app2);
+  app2.get("/api/age-calculator", (req, res) => {
+    const { birthDate } = req.query;
+    if (!birthDate || typeof birthDate !== "string") {
+      return res.status(400).json({ message: "\u064A\u0631\u062C\u0649 \u062A\u0648\u0641\u064A\u0631 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u064A\u0644\u0627\u062F" });
+    }
+    const birth = new Date(birthDate);
+    const now = /* @__PURE__ */ new Date();
+    if (isNaN(birth.getTime())) {
+      return res.status(400).json({ message: "\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u064A\u0644\u0627\u062F \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
+    }
+    let gYears = now.getFullYear() - birth.getFullYear();
+    let gMonths = now.getMonth() - birth.getMonth();
+    let gDays = now.getDate() - birth.getDate();
+    if (gDays < 0) {
+      gMonths -= 1;
+      gDays += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    }
+    if (gMonths < 0) {
+      gYears -= 1;
+      gMonths += 12;
+    }
+    const hijriBirth = estimateHijriFromGregorian(
+      birth.getDate(),
+      birth.getMonth() + 1,
+      birth.getFullYear()
+    );
+    const hijriNow = estimateHijriFromGregorian(
+      now.getDate(),
+      now.getMonth() + 1,
+      now.getFullYear()
+    );
+    let hYears = hijriNow.year - hijriBirth.year;
+    let hMonths = hijriNow.month - hijriBirth.month;
+    let hDays = hijriNow.day - hijriBirth.day;
+    if (hDays < 0) {
+      hMonths -= 1;
+      hDays += 30;
+    }
+    if (hMonths < 0) {
+      hYears -= 1;
+      hMonths += 12;
+    }
+    res.json({
+      gregorianYears: gYears,
+      gregorianMonths: gMonths,
+      gregorianDays: gDays,
+      hijriYears: hYears,
+      hijriMonths: hMonths,
+      hijriDays: hDays
+    });
+  });
   app2.get("/api/calendar/today", (req, res) => {
     try {
       const todayDate = getUmmAlQuraToday();
@@ -1099,7 +1150,7 @@ var vite_config_default = defineConfig({
     port: 3e3
   },
   build: {
-    outDir: resolve(__dirname, "../dist/public"),
+    outDir: "dist",
     emptyOutDir: true
   }
 });
@@ -1139,6 +1190,9 @@ async function setupVite(app2, server) {
   });
   app2.use(vite.middlewares);
   app2.use("*", async (req, res, next) => {
+    if (req.originalUrl.startsWith("/api")) {
+      return next();
+    }
     const url = req.originalUrl;
     try {
       const clientTemplate = path.resolve(
@@ -1225,19 +1279,20 @@ app.use((req, res, next) => {
   next();
 });
 (async () => {
-  const server = await registerRoutes(app);
+  const port = process.env.PORT || 5e3;
+  let server;
+  server = await registerRoutes(app);
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
   app.use((err, _req, res, _next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
     console.error("\u{1F525} Unhandled Error:", err);
   });
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-  const port = process.env.PORT || 5e3;
   server.listen(
     {
       port: Number(port),
