@@ -1,29 +1,26 @@
-import express, {
-  type Request,
-  type Response,
-  type NextFunction,
-} from 'express';
+
+import express, { type Request, type Response, type NextFunction } from 'express';
 import { registerRoutes } from './routes';
 import { setupVite, serveStatic, log } from './vite';
-import 'dotenv/config';
+import 'dotenv/config'; // يجب أن يكون أول شيء
 import cors from 'cors';
 import { setupAuth } from './auth';
 
 const app = express();
 
-// ✅ CORS setup: use env variable or allow all (for safe testing)
+// ✅ Debug CORS origins
+console.log('✅ Loaded CORS_ORIGIN:', process.env.CORS_ORIGIN);
+
+// ✅ CORS middleware
 app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
 
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        allowedOrigins.includes('*')
-      ) {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         return callback(null, true);
       } else {
+        console.error('❌ Blocked by CORS:', origin); // 👈 يساعد على التتبع
         return callback(new Error('Not allowed by CORS'));
       }
     },
@@ -38,7 +35,7 @@ app.use(express.urlencoded({ extended: false }));
 // ✅ Authentication setup
 setupAuth(app);
 
-// ✅ Request logging for API routes
+// ✅ Request logging
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -70,31 +67,28 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // ✅ Register API routes
   const server = await registerRoutes(app);
 
-  // ✅ Error handling middleware
+  // ✅ Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
     res.status(status).json({ message });
-    console.error(err); // Keep the log; don't throw in production
+    console.error(err);
   });
 
-  // ✅ Dev: serve frontend with Vite middleware
+  // ✅ Serve frontend
   if (app.get('env') === 'development') {
     await setupVite(app, server);
   } else {
-    // ✅ Prod: serve prebuilt frontend from Vite's output (dist/public)
-    serveStatic(app); // Serve from dist/public
+    serveStatic(app);
   }
 
-  // ✅ Always use port 5000 (Render requires this)
   const port = process.env.PORT || 5000;
   server.listen(
     {
       port: Number(port),
-      host: '0.0.0.0', // Required for Render public access
+      host: '0.0.0.0',
     },
     () => {
       log(`🚀 Server running on http://0.0.0.0:${port}`);
