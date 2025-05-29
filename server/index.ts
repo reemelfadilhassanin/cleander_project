@@ -7,27 +7,23 @@ import cors from 'cors';
 import { setupAuth } from './auth';
 
 const app = express();
-
+const allowedOrigins = [
+  'https://cleander-project-front.onrender.com', 
+  'http://localhost:3000' 
+];
 // ✅ Debug CORS origins
 console.log('✅ Loaded CORS_ORIGIN:', process.env.CORS_ORIGIN);
 
-// ✅ CORS middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
-
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        return callback(null, true);
-      } else {
-        console.error('❌ Blocked by CORS:', origin); // 👈 يساعد على التتبع
-        return callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-  })
-);
-
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 // ✅ Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
