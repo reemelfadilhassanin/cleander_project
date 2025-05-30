@@ -65,9 +65,9 @@ var events = pgTable("events", {
   hijriDay: integer("hijri_day"),
   hijriMonth: integer("hijri_month"),
   hijriYear: integer("hijri_year"),
-  gregorianDay: integer("gregorian_day").notNull(),
-  gregorianMonth: integer("gregorian_month").notNull(),
-  gregorianYear: integer("gregorian_year").notNull(),
+  gregorianDay: integer("gregorian_day"),
+  gregorianMonth: integer("gregorian_month"),
+  gregorianYear: integer("gregorian_year"),
   eventTime: time("event_time"),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
