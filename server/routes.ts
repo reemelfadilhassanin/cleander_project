@@ -370,6 +370,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(400)
           .json({ message: 'بيانات غير مكتملة لإنشاء المناسبة' });
       }
+      console.log('📥 Data passed to createEvent:', {
+  title,
+  days,
+  userId: req.user.id,
+
+  hijri_day: date.hijriDay,
+  hijri_month: date.hijriMonth,
+  hijri_year: date.hijriYear,
+
+  gregorian_day: date.gregorianDay,
+  gregorian_month: date.gregorianMonth,
+  gregorian_year: date.gregorianYear,
+
+  event_time: time,
+  is_hijri: date.isHijri,
+});
 
       const event = await storage.createEvent({
         title,
@@ -386,6 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         event_time: time,
         is_hijri: date.isHijri,
+        
       });
 
       res.status(201).json(event);
