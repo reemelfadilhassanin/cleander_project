@@ -343,8 +343,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events', requireAuth, async (req, res) => {
     try {
       const rawEvents = await storage.getUserEvents(req.user.id); // 🔐 تأكد من استخدام userId
+      const today = new Date();
 
-      const formatted = rawEvents.map((event) => {
+      // ✅ تنسيق مناسبات المستخدم
+      const formattedUserEvents = rawEvents.map((event) => {
         const {
           hijriDay,
           hijriMonth,
@@ -354,8 +356,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gregorianYear,
         } = event;
 
-        // حساب عدد الأيام المتبقية
-        const today = new Date();
         const eventDate = new Date(
           gregorianYear,
           gregorianMonth - 1,
@@ -370,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: event.title,
           notes: event.description,
           time: event.eventTime,
-          days,
+          days, // ✅ ضروري للتصفية في الواجهة الأمامية
           category: event.categoryId || 'uncategorized',
           date: {
             hijri: {
@@ -393,7 +393,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json([...formatted, ...defaultEvents]);
+      // ✅ تنسيق المناسبات الافتراضية defaultEvents
+      const formattedDefaultEvents = defaultEvents.map((event) => {
+        const { day, month, year } = event.date.gregorian;
+
+        const eventDate = new Date(year, month - 1, day);
+        const days = Math.ceil(
+          (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          ...event,
+          days, // ✅ ضروري للتصفية
+        };
+      });
+
+      res.json([...formattedUserEvents, ...formattedDefaultEvents]);
     } catch (error) {
       console.error('Error fetching events:', error);
       res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
