@@ -340,48 +340,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ];
 
   // --- جلب مناسبات المستخدم ---
-  app.get('/api/events', requireAuth, async (req, res) => {
+ app.get('/api/events', requireAuth, async (req, res) => {
   try {
-    const rawEvents = await storage.getUserEvents(req.user.id); // 🔐 تأكد من استخدام userId
+    const rawEvents = await storage.getUserEvents(req.user.id);
+    const today = new Date();
 
-    const formatted = rawEvents.map((event) => {
-      const { hijriDay, hijriMonth, hijriYear, gregorianDay, gregorianMonth, gregorianYear } = event;
+    const formatted = rawEvents
+      .map((event) => {
+        const { hijriDay, hijriMonth, hijriYear, gregorianDay, gregorianMonth, gregorianYear } = event;
 
-      // حساب عدد الأيام المتبقية
-      const today = new Date();
-      const eventDate = new Date(gregorianYear, gregorianMonth - 1, gregorianDay);
-      const days = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const eventDate = new Date(gregorianYear, gregorianMonth - 1, gregorianDay);
+        const days = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-      return {
-        id: event.id,
-        title: event.title,
-        notes: event.description,
-        time: event.eventTime,
-        days,
-        category: event.categoryId || 'uncategorized',
-        date: {
-          hijri: {
-            day: hijriDay,
-            month: hijriMonth,
-            year: hijriYear,
-            formatted: `${String(hijriDay).padStart(2, '0')}/${String(hijriMonth).padStart(2, '0')}/${hijriYear}`,
+        return {
+          id: event.id,
+          title: event.title,
+          notes: event.description,
+          time: event.eventTime,
+          days,
+          category: event.categoryId || 'uncategorized',
+          date: {
+            hijri: {
+              day: hijriDay,
+              month: hijriMonth,
+              year: hijriYear,
+              formatted: `${String(hijriDay).padStart(2, '0')}/${String(hijriMonth).padStart(2, '0')}/${hijriYear}`,
+            },
+            gregorian: {
+              day: gregorianDay,
+              month: gregorianMonth,
+              year: gregorianYear,
+              formatted: `${String(gregorianDay).padStart(2, '0')}/${String(gregorianMonth).padStart(2, '0')}/${gregorianYear}`,
+            },
           },
-          gregorian: {
-            day: gregorianDay,
-            month: gregorianMonth,
-            year: gregorianYear,
-            formatted: `${String(gregorianDay).padStart(2, '0')}/${String(gregorianMonth).padStart(2, '0')}/${gregorianYear}`,
-          },
-        },
-      };
-    });
+        };
+      })
+      .filter(event => event.days >= 0); // ✅ فلترة المناسبات التي لم تنتهِ بعد
 
-    res.json([...formatted, ...defaultEvents]);
+    // --- فلترة المناسبات الافتراضية بنفس الطريقة ---
+    const filteredDefaultEvents = defaultEvents
+      .map((event) => {
+        const eventDate = new Date(
+          event.date.gregorian.year,
+          event.date.gregorian.month - 1,
+          event.date.gregorian.day
+        );
+        const days = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        return { ...event, days };
+      })
+      .filter(event => event.days >= 0); // ✅ فقط المستقبلية أو اليوم
+
+    res.json([...formatted, ...filteredDefaultEvents]);
   } catch (error) {
     console.error('Error fetching events:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
   }
 });
+
 
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
