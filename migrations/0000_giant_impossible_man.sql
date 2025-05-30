@@ -9,6 +9,7 @@ CREATE TABLE "events" (
 	"gregorian_day" integer,
 	"gregorian_month" integer,
 	"gregorian_year" integer,
+	"is_hijri" boolean DEFAULT true NOT NULL,
 	"event_time" time,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );

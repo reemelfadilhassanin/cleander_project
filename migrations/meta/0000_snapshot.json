@@ -1,5 +1,5 @@
 {
-  "id": "7b513af3-27c6-4a25-81a7-5bb915361015",
+  "id": "ea8b95c2-6abe-4f30-b036-4cbdde811755",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -67,6 +67,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_hijri": {
+          "name": "is_hijri",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "event_time": {
           "name": "event_time",

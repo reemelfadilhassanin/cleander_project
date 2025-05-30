@@ -54,6 +54,7 @@ export const events = pgTable('events', {
   gregorianDay: integer('gregorian_day'),
   gregorianMonth: integer('gregorian_month'),
   gregorianYear: integer('gregorian_year'),
+  isHijri: boolean('is_hijri').notNull().default(true),
 
   eventTime: time('event_time'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
