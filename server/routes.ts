@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
-      const { title, days, date, time } = req.body;
+      const { title, days, date, time, notes } = req.body;
 
       if (
         !title ||
@@ -370,39 +370,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(400)
           .json({ message: 'بيانات غير مكتملة لإنشاء المناسبة' });
       }
-     console.log('📥 Data passed to createEvent:', {
-  title,
-  days,
-  userId: req.user.id,
-  hijriDay: date.hijriDay,
-  hijriMonth: date.hijriMonth,
-  hijriYear: date.hijriYear,
-  gregorianDay: date.gregorianDay,
-  gregorianMonth: date.gregorianMonth,
-  gregorianYear: date.gregorianYear,
-  eventTime: time,
-  isHijri: date.isHijri,
-   description: notes,
-});
+      console.log('📥 Data passed to createEvent:', {
+        title,
+        days,
+        userId: req.user.id,
+        hijriDay: date.hijriDay,
+        hijriMonth: date.hijriMonth,
+        hijriYear: date.hijriYear,
+        gregorianDay: date.gregorianDay,
+        gregorianMonth: date.gregorianMonth,
+        gregorianYear: date.gregorianYear,
+        eventTime: time,
+        isHijri: date.isHijri,
+        description: notes,
+      });
 
       const event = await storage.createEvent({
-  title,
-  days,
-  userId: req.user.id,
+        title,
+        days,
+        userId: req.user.id,
 
-  hijriDay: date.hijriDay,
-  hijriMonth: date.hijriMonth,
-  hijriYear: date.hijriYear,
+        hijriDay: date.hijriDay,
+        hijriMonth: date.hijriMonth,
+        hijriYear: date.hijriYear,
 
-  gregorianDay: date.gregorianDay,
-  gregorianMonth: date.gregorianMonth,
-  gregorianYear: date.gregorianYear,
+        gregorianDay: date.gregorianDay,
+        gregorianMonth: date.gregorianMonth,
+        gregorianYear: date.gregorianYear,
 
-  eventTime: time,
-  isHijri: date.isHijri,
-   description: notes,
-});
-
+        eventTime: time,
+        isHijri: date.isHijri,
+        description: notes,
+      });
 
       res.status(201).json(event);
     } catch (error) {
