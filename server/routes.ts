@@ -313,39 +313,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // --- بيانات مناسبات افتراضية ---
-  const defaultEvents: Event[] = [
-    {
-      id: 1,
-      title: 'عيد الفطر',
-      days: 3,
-      date: {
-        hijri: { day: 1, month: 10, year: 1444, formatted: '01/10/1444' },
-        gregorian: { day: 10, month: 4, year: 2023, formatted: '10/04/2023' },
-      },
-      color: 'green',
-      categoryId: '1',
-    },
-    {
-      id: 2,
-      title: 'عيد الأضحى',
-      days: 4,
-      date: {
-        hijri: { day: 10, month: 12, year: 1444, formatted: '10/12/1444' },
-        gregorian: { day: 17, month: 6, year: 2023, formatted: '17/06/2023' },
-      },
-      color: 'green',
-      categoryId: '1',
-    },
-    // يمكن إضافة مناسبات أخرى هنا
-  ];
+  // const defaultEvents: Event[] = [
+  //   {
+  //     id: 1,
+  //     title: 'عيد الفطر',
+  //     days: 3,
+  //     date: {
+  //       hijri: { day: 1, month: 10, year: 1444, formatted: '01/10/1444' },
+  //       gregorian: { day: 10, month: 4, year: 2023, formatted: '10/04/2023' },
+  //     },
+  //     color: 'green',
+  //     categoryId: '1',
+  //   },
+  //   {
+  //     id: 2,
+  //     title: 'عيد الأضحى',
+  //     days: 4,
+  //     date: {
+  //       hijri: { day: 10, month: 12, year: 1444, formatted: '10/12/1444' },
+  //       gregorian: { day: 17, month: 6, year: 2023, formatted: '17/06/2023' },
+  //     },
+  //     color: 'green',
+  //     categoryId: '1',
+  //   },
+  //   // يمكن إضافة مناسبات أخرى هنا
+  // ];
 
   // --- جلب مناسبات المستخدم ---
+  // --- جلب مناسبات المستخدم فقط ---
   app.get('/api/events', requireAuth, async (req, res) => {
     try {
-      const rawEvents = await storage.getUserEvents(req.user.id); // 🔐 تأكد من استخدام userId
+      const rawEvents = await storage.getUserEvents(req.user.id);
       const today = new Date();
 
-      // ✅ تنسيق مناسبات المستخدم
       const formattedUserEvents = rawEvents.map((event) => {
         const {
           hijriDay,
@@ -361,6 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gregorianMonth - 1,
           gregorianDay
         );
+
         const days = Math.ceil(
           (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -370,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: event.title,
           notes: event.description,
           time: event.eventTime,
-          days, // ✅ ضروري للتصفية في الواجهة الأمامية
+          days,
           category: event.categoryId || 'uncategorized',
           date: {
             hijri: {
@@ -393,22 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      // ✅ تنسيق المناسبات الافتراضية defaultEvents
-      const formattedDefaultEvents = defaultEvents.map((event) => {
-        const { day, month, year } = event.date.gregorian;
-
-        const eventDate = new Date(year, month - 1, day);
-        const days = Math.ceil(
-          (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        return {
-          ...event,
-          days, // ✅ ضروري للتصفية
-        };
-      });
-
-      res.json([...formattedUserEvents, ...formattedDefaultEvents]);
+      res.json(formattedUserEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
       res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
