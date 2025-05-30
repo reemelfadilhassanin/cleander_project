@@ -1,6 +1,6 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Helper to throw detailed error for non-ok responses
 async function throwIfResNotOk(res: Response) {
@@ -11,25 +11,34 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-
 // General API request wrapper for mutations
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown
 ): Promise<Response> {
+  const token = localStorage.getItem('token');
+
+  const headers: Record<string, string> = data
+    ? { 'Content-Type': 'application/json' }
+    : {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE_URL}${url}`, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // ✅ Always send cookies/session
+    credentials: 'include', // Optional: only if using cookies too
   });
 
   await throwIfResNotOk(res);
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
+type UnauthorizedBehavior = 'returnNull' | 'throw';
 
 // Factory function to create a query function with 401 handling
 export const getQueryFn: <T>(options: {
@@ -40,14 +49,14 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
 
     const res = await fetch(`${API_BASE_URL}${url}`, {
-      credentials: "include", // ✅ Send cookies/session
+      credentials: 'include', // ✅ Send cookies/session
     });
 
     if (res.status === 401) {
-      if (on401 === "returnNull") {
+      if (on401 === 'returnNull') {
         return null as T;
       }
-      throw new Error("Unauthorized (401)");
+      throw new Error('Unauthorized (401)');
     }
 
     await throwIfResNotOk(res);
@@ -58,7 +67,7 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: 'throw' }),
       refetchOnWindowFocus: false,
       refetchInterval: false,
       staleTime: Infinity,
