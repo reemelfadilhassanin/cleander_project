@@ -340,17 +340,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ];
 
   // --- جلب مناسبات المستخدم ---
-  app.get('/api/events', async (req, res) => {
-    try {
-      const userEvents = await storage.getAllEvents();
+  app.get('/api/events', requireAuth, async (req, res) => {
+  try {
+    const rawEvents = await storage.getUserEvents(req.user.id); // 🔐 تأكد من استخدام userId
 
-      const events = [...userEvents, ...defaultEvents];
-      res.json(events);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
-    }
-  });
+    const formatted = rawEvents.map((event) => {
+      const { hijriDay, hijriMonth, hijriYear, gregorianDay, gregorianMonth, gregorianYear } = event;
+
+      // حساب عدد الأيام المتبقية
+      const today = new Date();
+      const eventDate = new Date(gregorianYear, gregorianMonth - 1, gregorianDay);
+      const days = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      return {
+        id: event.id,
+        title: event.title,
+        notes: event.description,
+        time: event.eventTime,
+        days,
+        category: event.categoryId || 'uncategorized',
+        date: {
+          hijri: {
+            day: hijriDay,
+            month: hijriMonth,
+            year: hijriYear,
+            formatted: `${String(hijriDay).padStart(2, '0')}/${String(hijriMonth).padStart(2, '0')}/${hijriYear}`,
+          },
+          gregorian: {
+            day: gregorianDay,
+            month: gregorianMonth,
+            year: gregorianYear,
+            formatted: `${String(gregorianDay).padStart(2, '0')}/${String(gregorianMonth).padStart(2, '0')}/${gregorianYear}`,
+          },
+        },
+      };
+    });
+
+    res.json([...formatted, ...defaultEvents]);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
+  }
+});
 
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
