@@ -31,12 +31,11 @@ export default function AgeCalculatorPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/age-calculator?birthDate=${birthDate}`,
-        {
-          credentials: 'include',
-        }
-      );
+    const response = await fetch(
+  `https://cleander-project-server.onrender.com/api/age-calculator?birthDate=${birthDate}`,
+  { credentials: 'include' }
+);
+
 
       if (!response.ok) {
         throw new Error('خطأ في حساب العمر');
