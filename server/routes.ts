@@ -339,13 +339,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // يمكن إضافة مناسبات أخرى هنا
   ];
 
-app.get('/api/events', requireAuth, async (req, res) => {
-  try {
-    const rawEvents = await storage.getUserEvents(req.user.id);
-    const today = new Date();
+  // --- جلب مناسبات المستخدم ---
+  app.get('/api/events', requireAuth, async (req, res) => {
+    try {
+      const rawEvents = await storage.getUserEvents(req.user.id); // 🔐 تأكد من استخدام userId
 
-    const formattedUserEvents = rawEvents
-      .map((event) => {
+      const formatted = rawEvents.map((event) => {
         const {
           hijriDay,
           hijriMonth,
@@ -355,6 +354,8 @@ app.get('/api/events', requireAuth, async (req, res) => {
           gregorianYear,
         } = event;
 
+        // حساب عدد الأيام المتبقية
+        const today = new Date();
         const eventDate = new Date(
           gregorianYear,
           gregorianMonth - 1,
@@ -390,34 +391,14 @@ app.get('/api/events', requireAuth, async (req, res) => {
             },
           },
         };
-      })
-      .filter(event => event.days >= 0); // ✅ فقط المناسبات المستقبلية
+      });
 
-    const filteredDefaultEvents = defaultEvents
-      .map(event => {
-        const eventDate = new Date(
-          event.date.gregorian.year,
-          event.date.gregorian.month - 1,
-          event.date.gregorian.day
-        );
-        const days = Math.ceil(
-          (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        return {
-          ...event,
-          days,
-        };
-      })
-      .filter(event => event.days >= 0); // ✅ فقط المناسبات المستقبلية
-
-    res.json([...formattedUserEvents, ...filteredDefaultEvents]);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
-  }
-});
-
+      res.json([...formatted, ...defaultEvents]);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ message: 'حدث خطأ أثناء جلب المناسبات' });
+    }
+  });
 
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
