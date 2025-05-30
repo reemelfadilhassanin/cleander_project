@@ -1242,17 +1242,6 @@ var allowedOrigins = [
   "http://localhost:3000"
 ];
 console.log("\u2705 Allowed CORS Origins:", allowedOrigins);
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://cleander-project-front.onrender.com");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Max-Age", "86400");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
 app.use(
   cors({
     origin: (origin, callback) => {

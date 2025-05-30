@@ -19,20 +19,8 @@ const allowedOrigins = [
 ];
 
 console.log('✅ Allowed CORS Origins:', allowedOrigins);
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://cleander-project-front.onrender.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 ساعة
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-  next();
-});
 
-
-// ✅ CORS middleware
+// ✅ CORS middleware (only use this - no custom headers!)
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -88,17 +76,17 @@ app.use((req, res, next) => {
   const port = process.env.PORT || 5000;
   let server;
 
-  // ✅ أولاً: تسجيل الـ API routes (يجب أن يكون أولاً)
+  // ✅ Register API routes
   server = await registerRoutes(app);
 
-  // ✅ ثم إعداد واجهة المستخدم الأمامية حسب البيئة
+  // ✅ Serve frontend based on environment
   if (app.get('env') === 'development') {
-    await setupVite(app, server); // ملاحظة: أضفت server هنا حسب توقيع الدالة
+    await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ✅ خطأ عام لجميع الميدلويرز
+  // ✅ Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
