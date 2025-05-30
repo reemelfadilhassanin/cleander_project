@@ -353,30 +353,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- إضافة مناسبة جديدة ---
-app.post('/api/events', async (req, res) => {
-  try {
-    const { title, days, date } = req.body;
+  app.post('/api/events', requireAuth, async (req, res) => {
+    try {
+      const { title, days, date } = req.body;
 
-    if (!title || !days || !date?.hijriDay || !date?.hijriMonth || !date?.hijriYear) {
-      return res.status(400).json({ message: 'بيانات غير مكتملة لإنشاء المناسبة' });
+      if (
+        !title ||
+        !days ||
+        !date?.hijriDay ||
+        !date?.hijriMonth ||
+        !date?.hijriYear
+      ) {
+        return res
+          .status(400)
+          .json({ message: 'بيانات غير مكتملة لإنشاء المناسبة' });
+      }
+
+      const event = await storage.createEvent({
+        title,
+        days,
+        userId: req.user.id,
+        hijri_day: date.hijriDay,
+        hijri_month: date.hijriMonth,
+        hijri_year: date.hijriYear,
+      });
+
+      res.status(201).json(event);
+    } catch (error) {
+      console.error('خطأ في إنشاء المناسبة:', error);
+      res.status(500).json({ message: 'حدث خطأ أثناء إنشاء المناسبة' });
     }
-
-    const event = await storage.createEvent({
-      title,
-      days,
-      userId: req.user.id,
-      hijri_day: date.hijriDay,
-      hijri_month: date.hijriMonth,
-      hijri_year: date.hijriYear,
-    });
-
-    res.status(201).json(event);
-  } catch (error) {
-    console.error('خطأ في إنشاء المناسبة:', error);
-    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء المناسبة' });
-  }
-});
-
+  });
 
   // --- حذف مناسبة ---
   app.delete('/api/events/:id', async (req, res) => {
