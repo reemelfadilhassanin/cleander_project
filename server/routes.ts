@@ -352,17 +352,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // --- إضافة مناسبة جديدة ---
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
-      const { title, days, date } = req.body;
+      const { title, days, date, time } = req.body;
 
       if (
         !title ||
         !days ||
         !date?.hijriDay ||
         !date?.hijriMonth ||
-        !date?.hijriYear
+        !date?.hijriYear ||
+        !date?.gregorianDay ||
+        !date?.gregorianMonth ||
+        !date?.gregorianYear
       ) {
         return res
           .status(400)
@@ -373,9 +375,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title,
         days,
         userId: req.user.id,
+
         hijri_day: date.hijriDay,
         hijri_month: date.hijriMonth,
         hijri_year: date.hijriYear,
+
+        gregorian_day: date.gregorianDay,
+        gregorian_month: date.gregorianMonth,
+        gregorian_year: date.gregorianYear,
+
+        event_time: time, // مثال: "14:30"
       });
 
       res.status(201).json(event);
