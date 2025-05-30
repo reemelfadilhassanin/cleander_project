@@ -382,6 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   gregorianYear: date.gregorianYear,
   eventTime: time,
   isHijri: date.isHijri,
+   description: notes,
 });
 
       const event = await storage.createEvent({
@@ -399,6 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   eventTime: time,
   isHijri: date.isHijri,
+   description: notes,
 });
 
 
