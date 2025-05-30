@@ -285,23 +285,23 @@ export default function AddEventPage() {
       );
       const gregorianDate = hijriDate.toGregorian();
 
-      if (isNaN(gregorianDate.getTime())) {
-        toast({
-          title: 'خطأ في التاريخ',
-          description:
-            'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
-          variant: 'destructive',
-        });
-        setIsSubmitting(false);
-        return;
-      }
+if (isNaN(gregorianDate.getTime())) {
+  toast({
+    title: 'خطأ في التاريخ',
+    description: 'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
+    variant: 'destructive',
+  });
+  setIsSubmitting(false);
+  return;
+}
 
-      datePayload = {
-        gregorianDay: gregorianDate.getDate(),
-        gregorianMonth: gregorianDate.getMonth() + 1,
-        gregorianYear: gregorianDate.getFullYear(),
-        isHijri: false,
-      };
+datePayload = {
+  gregorianDay: gregorianDate.getDate(),
+  gregorianMonth: gregorianDate.getMonth() + 1,
+  gregorianYear: gregorianDate.getFullYear(),
+  isHijri: false,
+};
+
     }
 
     const payloadToSend = {
@@ -457,23 +457,18 @@ export default function AddEventPage() {
                         onClick={() => setIsDateDialogOpen(true)}
                       >
                         <span>
-                          {isHijri
-                            ? `${
-                                form.getValues().date.hijriDay
-                              } ${getHijriMonthName(
-                                form.getValues().date.hijriMonth
-                              )} ${form.getValues().date.hijriYear} هـ`
-                            : new HijriDate(
-                                form.getValues().date.hijriYear,
-                                form.getValues().date.hijriMonth - 1,
-                                form.getValues().date.hijriDay
-                              )
-                                .toGregorian()
-                                .toLocaleDateString('ar-SA-u-nu-latn', {
-                                  day: 'numeric',
-                                  month: 'long',
-                                  year: 'numeric',
-                                }) + ' م'}
+               {isHijri
+  ? `${form.getValues().date.hijriDay} ${getHijriMonthName(form.getValues().date.hijriMonth)} ${form.getValues().date.hijriYear} هـ`
+  : new HijriDate(
+      form.getValues().date.hijriYear,
+      form.getValues().date.hijriMonth - 1,
+      form.getValues().date.hijriDay
+    ).toGregorian().toLocaleDateString('ar-SA-u-nu-latn', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }) + ' م'}
+
                         </span>
                         <Calendar className="h-4 w-4 text-gray-500" />
                       </div>

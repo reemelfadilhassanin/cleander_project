@@ -69,7 +69,7 @@ export default function EventsPage() {
     queryKey: ['/api/events', selectedCategory],
     queryFn: async () => {
       const category = selectedCategory !== 'all' ? selectedCategory : undefined;
-      const response = await fetch(`/api/events${category ? `?category=${category}` : ''}`);
+      const response = await fetch(`https://cleander-project-server.onrender.com/api/events${category ? `?category=${category}` : ''}`);
       if (!response.ok) {
         throw new Error('فشل في جلب المناسبات');
       }
