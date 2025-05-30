@@ -8,7 +8,7 @@ import { type Server } from 'http';
 import viteConfig from '../client/vite.config';
 import { nanoid } from 'nanoid';
 
-// ✅ ESM-compatible __dirname
+// ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -25,6 +25,7 @@ export function log(message: string, source = 'express') {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// ⚙️ Vite setup (development only)
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -48,14 +49,11 @@ export async function setupVite(app: Express, server: Server) {
 
   app.use(vite.middlewares);
 
-  // ✅ فقط نعرض index.html إذا لم يكن الطلب يبدأ بـ /api
+  // Serve index.html for non-API routes
   app.use('*', async (req, res, next) => {
-    if (req.originalUrl.startsWith('/api')) {
-      return next();
-    }
+    if (req.originalUrl.startsWith('/api')) return next();
 
     const url = req.originalUrl;
-
     try {
       const clientTemplate = path.resolve(
         __dirname,
@@ -79,6 +77,7 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
+// 🏁 Static serving for production
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, 'public');
 
@@ -88,9 +87,13 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Serve static frontend assets
   app.use(express.static(distPath));
 
-  app.use('*', (_req, res) => {
+  // Serve index.html for non-API routes
+  app.get('*', (req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) return next();
+
     res.sendFile(path.resolve(distPath, 'index.html'));
   });
 }

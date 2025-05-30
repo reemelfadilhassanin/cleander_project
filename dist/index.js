@@ -1195,9 +1195,7 @@ async function setupVite(app2, server) {
   });
   app2.use(vite.middlewares);
   app2.use("*", async (req, res, next) => {
-    if (req.originalUrl.startsWith("/api")) {
-      return next();
-    }
+    if (req.originalUrl.startsWith("/api")) return next();
     const url = req.originalUrl;
     try {
       const clientTemplate = path.resolve(
@@ -1227,7 +1225,8 @@ function serveStatic(app2) {
     );
   }
   app2.use(express.static(distPath));
-  app2.use("*", (_req, res) => {
+  app2.get("*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api")) return next();
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
