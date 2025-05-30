@@ -13,6 +13,10 @@ import connectPg from 'connect-pg-simple';
 import { db } from './db';
 import { pool } from './db';
 import { eq, desc, sql } from 'drizzle-orm';
+import {
+  type InsertEvent,
+} from '@shared/schema';
+
 
 const PostgresSessionStore = connectPg(session);
 
@@ -71,6 +75,15 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
+async createEvent(eventData: InsertEvent): Promise<Event> {
+  try {
+    const [event] = await db.insert(events).values(eventData).returning();
+    return event;
+  } catch (error) {
+    console.error('خطأ في إنشاء المناسبة:', error);
+    throw error;
+  }
+}
 
   async getUser(id: number): Promise<User | undefined> {
     try {
@@ -97,6 +110,30 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
   }
+  async deleteEvent(eventId: number): Promise<boolean> {
+  try {
+    const result = await db.delete(events).where(eq(events.id, eventId)).returning({ id: events.id });
+    return result.length > 0;
+  } catch (error) {
+    console.error('خطأ في حذف المناسبة:', error);
+    return false;
+  }
+}
+
+async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
+  try {
+    const [updated] = await db
+      .update(events)
+      .set(updateData)
+      .where(eq(events.id, eventId))
+      .returning();
+    return updated;
+  } catch (error) {
+    console.error('خطأ في تعديل المناسبة:', error);
+    return undefined;
+  }
+}
+
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {

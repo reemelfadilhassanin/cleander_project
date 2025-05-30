@@ -101,14 +101,25 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const findEventForDate = (date: CalendarDate) => {
     if (!events || events.length === 0 || !date) return null;
+
     return events.find((event) => {
-      return isHijri
-        ? event.date.hijri.day === date.hijriDay &&
-            event.date.hijri.month === date.hijriMonth &&
-            event.date.hijri.year === date.hijriYear
-        : event.date.gregorian.day === date.gregorianDay &&
-            event.date.gregorian.month === date.gregorianMonth &&
-            event.date.gregorian.year === date.gregorianYear;
+      if (!event.date) return false;
+
+      if (isHijri) {
+        return (
+          event.date.hijri &&
+          event.date.hijri.day === date.hijriDay &&
+          event.date.hijri.month === date.hijriMonth &&
+          event.date.hijri.year === date.hijriYear
+        );
+      } else {
+        return (
+          event.date.gregorian &&
+          event.date.gregorian.day === date.gregorianDay &&
+          event.date.gregorian.month === date.gregorianMonth &&
+          event.date.gregorian.year === date.gregorianYear
+        );
+      }
     });
   };
 

@@ -20,7 +20,15 @@ __export(schema_exports, {
   systemSettings: () => systemSettings,
   users: () => users
 });
-import { pgTable, text, serial, integer, time, boolean, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  time,
+  boolean,
+  timestamp
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 var users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -54,9 +62,9 @@ var events = pgTable("events", {
   userId: integer("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   description: text("description"),
-  hijriDay: integer("hijri_day").notNull(),
-  hijriMonth: integer("hijri_month").notNull(),
-  hijriYear: integer("hijri_year").notNull(),
+  hijriDay: integer("hijri_day"),
+  hijriMonth: integer("hijri_month"),
+  hijriYear: integer("hijri_year"),
   gregorianDay: integer("gregorian_day").notNull(),
   gregorianMonth: integer("gregorian_month").notNull(),
   gregorianYear: integer("gregorian_year").notNull(),
@@ -76,7 +84,9 @@ var insertEventSchema = createInsertSchema(events).omit({
   id: true,
   createdAt: true
 });
-var insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({
+var insertSystemSettingsSchema = createInsertSchema(
+  systemSettings
+).omit({
   id: true,
   lastUpdated: true
 });
@@ -117,6 +127,15 @@ var DatabaseStorage = class {
       tableName: "user_sessions"
     });
   }
+  async createEvent(eventData) {
+    try {
+      const [event] = await db.insert(events).values(eventData).returning();
+      return event;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629:", error);
+      throw error;
+    }
+  }
   async getUser(id) {
     try {
       const [user] = await db.select({
@@ -136,6 +155,24 @@ var DatabaseStorage = class {
       return user;
     } catch (error) {
       console.error("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:", error);
+      return void 0;
+    }
+  }
+  async deleteEvent(eventId) {
+    try {
+      const result = await db.delete(events).where(eq(events.id, eventId)).returning({ id: events.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629:", error);
+      return false;
+    }
+  }
+  async updateEvent(eventId, updateData) {
+    try {
+      const [updated] = await db.update(events).set(updateData).where(eq(events.id, eventId)).returning();
+      return updated;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629:", error);
       return void 0;
     }
   }
@@ -369,12 +406,6 @@ async function comparePasswords(supplied, stored) {
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = await scryptAsync(supplied, salt, 64);
   return timingSafeEqual(hashedBuf, suppliedBuf);
-}
-function requireAuth(req, res, next) {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    return res.status(401).json({ message: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D" });
-  }
-  next();
 }
 function setupAuth(app2) {
   const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString("hex");
@@ -1020,29 +1051,23 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0627\u062A" });
     }
   });
-  app2.post("/api/events", requireAuth, async (req, res) => {
+  app2.post("/api/events", async (req, res) => {
     try {
-      const eventData = req.body;
-      if (!eventData.title || !eventData.date) {
-        return res.status(400).json({ message: "\u064A\u062C\u0628 \u062A\u0648\u0641\u064A\u0631 \u0639\u0646\u0648\u0627\u0646 \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629" });
+      const { title, days, date: date2 } = req.body;
+      if (!title || !days || !date2?.hijriDay || !date2?.hijriMonth || !date2?.hijriYear) {
+        return res.status(400).json({ message: "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629" });
       }
-      if (!eventData.date || typeof eventData.date !== "object" || !eventData.date.hijri || typeof eventData.date.hijri !== "object" || typeof eventData.date.hijri.day !== "number" || typeof eventData.date.hijri.month !== "number" || typeof eventData.date.hijri.year !== "number") {
-        return res.status(400).json({ message: "\u062A\u0627\u0631\u064A\u062E \u0647\u062C\u0631\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D \u0623\u0648 \u0645\u0641\u0642\u0648\u062F" });
-      }
-      if (!isValidHijriDate(
-        eventData.date.hijri.day,
-        eventData.date.hijri.month,
-        eventData.date.hijri.year
-      )) {
-        return res.status(400).json({ message: "\u062A\u0627\u0631\u064A\u062E \u0647\u062C\u0631\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
-      }
-      const newEvent = await storage.events.create({
-        ...eventData,
-        userId: req.user.id
+      const event = await storage.createEvent({
+        title,
+        days,
+        userId: req.user.id,
+        hijri_day: date2.hijriDay,
+        hijri_month: date2.hijriMonth,
+        hijri_year: date2.hijriYear
       });
-      res.status(201).json(newEvent);
+      res.status(201).json(event);
     } catch (error) {
-      console.error("Error creating event:", error);
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629:", error);
       res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629" });
     }
   });
@@ -1052,7 +1077,7 @@ async function registerRoutes(app2) {
       if (isNaN(eventId)) {
         return res.status(400).json({ message: "\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
       }
-      await storage.events.delete(eventId);
+      await storage.deleteEvent(eventId);
       res.json({ message: "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629 \u0628\u0646\u062C\u0627\u062D" });
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -1073,7 +1098,7 @@ async function registerRoutes(app2) {
       )) {
         return res.status(400).json({ message: "\u062A\u0627\u0631\u064A\u062E \u0647\u062C\u0631\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
       }
-      const updatedEvent = await storage.events.update(eventId, updateData);
+      const updatedEvent = await storage.updateEvent(eventId, updateData);
       res.json(updatedEvent);
     } catch (error) {
       console.error("Error updating event:", error);

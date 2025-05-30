@@ -3,12 +3,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toArabicNumerals } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar, CheckCircle, Clock, Edit, Trash2, AlertTriangle, Filter, ArrowLeft, Sun } from 'lucide-react';
+import {
+  PlusCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Edit,
+  Trash2,
+  AlertTriangle,
+  Filter,
+  ArrowLeft,
+  Sun,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useCategories } from '@/context/CategoryContext';
 import {
@@ -19,7 +36,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 interface EventCategory {
@@ -61,23 +78,26 @@ export default function EventsPage() {
   // Fetch categories
   const { data: categories } = useQuery<EventCategory[]>({
     queryKey: ['/api/categories'],
-    enabled: true
+    enabled: true,
   });
 
   // Fetch events
   const { data: events, isLoading } = useQuery<Event[]>({
     queryKey: ['/api/events', selectedCategory],
     queryFn: async () => {
-      const category = selectedCategory !== 'all' ? selectedCategory : undefined;
-      const response = await fetch(`https://cleander-project-server.onrender.com/api/events${category ? `?category=${category}` : ''}`);
+      const category =
+        selectedCategory !== 'all' ? selectedCategory : undefined;
+      const response = await fetch(
+        `/api/events${category ? `?category=${category}` : ''}`
+      );
       if (!response.ok) {
         throw new Error('فشل في جلب المناسبات');
       }
       return response.json();
     },
-    enabled: true
+    enabled: true,
   });
-  
+
   // Delete all events mutation
   const deleteAllEventsMutation = useMutation({
     mutationFn: async () => {
@@ -87,18 +107,18 @@ export default function EventsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       toast({
-        title: "تم الحذف",
-        description: "تم حذف جميع المناسبات بنجاح",
+        title: 'تم الحذف',
+        description: 'تم حذف جميع المناسبات بنجاح',
       });
       setIsDeleteDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "خطأ",
-        description: error.message || "لم نتمكن من حذف المناسبات",
-        variant: "destructive",
+        title: 'خطأ',
+        description: error.message || 'لم نتمكن من حذف المناسبات',
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   const handleDeleteAllEvents = () => {
@@ -109,13 +129,16 @@ export default function EventsPage() {
     deleteAllEventsMutation.mutate();
   };
 
-  const activeEvents = events?.filter(event => event.days > 0) || [];
-  const pastEvents = events?.filter(event => event.days <= 0) || [];
+  const activeEvents = events?.filter((event) => event.days > 0) || [];
+  const pastEvents = events?.filter((event) => event.days <= 0) || [];
 
   return (
     <div className="container max-w-md mx-auto p-4 mb-24 text-right">
       {/* Dialog للتأكيد قبل الحذف */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="text-right">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -123,7 +146,8 @@ export default function EventsPage() {
               تأكيد حذف المناسبات
             </AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف جميع المناسبات؟ لا يمكن التراجع عن هذا الإجراء.
+              هل أنت متأكد من حذف جميع المناسبات؟ لا يمكن التراجع عن هذا
+              الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex flex-row-reverse justify-start gap-2">
@@ -140,7 +164,7 @@ export default function EventsPage() {
 
       <header className="flex justify-between items-center mb-6">
         <Button
-          variant="outline" 
+          variant="outline"
           size="sm"
           className="text-green-700 border-green-700 rounded-lg text-sm px-4"
           onClick={() => setLocation('/categories')}
@@ -157,7 +181,7 @@ export default function EventsPage() {
           <Calendar className="h-5 w-5" />
         </Button>
       </header>
-      
+
       {/* Search bar */}
       <div className="relative mb-4">
         <Input
@@ -169,7 +193,7 @@ export default function EventsPage() {
         />
         <Filter className="absolute top-2.5 right-3 h-5 w-5 text-gray-400" />
       </div>
-      
+
       {/* Dropdown for categories */}
       <div className="mb-5">
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -177,21 +201,27 @@ export default function EventsPage() {
             <SelectValue placeholder="جميع الأقسام" />
           </SelectTrigger>
           <SelectContent position="item-aligned" align="end">
-            {categories?.map(cat => {
+            {categories?.map((cat) => {
               // طريقة أبسط لتحديد ألوان الفئات
               let dotColorClass = '';
-              
+
               if (cat.id === '1') dotColorClass = 'bg-green-500';
               else if (cat.id === '2') dotColorClass = 'bg-purple-500';
               else if (cat.id === '3') dotColorClass = 'bg-red-500';
               else if (cat.id === '4') dotColorClass = 'bg-orange-500';
               else if (cat.id === '5') dotColorClass = 'bg-teal-500';
-              
+
               return (
-                <SelectItem key={cat.id} value={cat.id} className="text-right flex items-center justify-between py-2">
+                <SelectItem
+                  key={cat.id}
+                  value={cat.id}
+                  className="text-right flex items-center justify-between py-2"
+                >
                   <div className="flex items-center gap-2">
                     {cat.id !== 'all' && (
-                      <div className={`w-3 h-3 rounded-full ${dotColorClass}`}></div>
+                      <div
+                        className={`w-3 h-3 rounded-full ${dotColorClass}`}
+                      ></div>
                     )}
                     <span>{cat.name}</span>
                   </div>
@@ -201,11 +231,13 @@ export default function EventsPage() {
           </SelectContent>
         </Select>
       </div>
-      
+
       {/* Tabs */}
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <div 
-          className={`flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer order-1 ${activeTab === 1 ? 'bg-blue-100 shadow-sm' : 'bg-white border'}`}
+        <div
+          className={`flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer order-1 ${
+            activeTab === 1 ? 'bg-blue-100 shadow-sm' : 'bg-white border'
+          }`}
           onClick={() => setActiveTab(1)}
         >
           <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
@@ -213,8 +245,10 @@ export default function EventsPage() {
           </span>
           <span className="font-medium">المناسبات المنتهية</span>
         </div>
-        <div 
-          className={`flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer order-0 ${activeTab === 2 ? 'bg-green-100 shadow-sm' : 'bg-white border'}`}
+        <div
+          className={`flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer order-0 ${
+            activeTab === 2 ? 'bg-green-100 shadow-sm' : 'bg-white border'
+          }`}
           onClick={() => setActiveTab(2)}
         >
           <span className="font-medium">المناسبات النشطة</span>
@@ -223,7 +257,7 @@ export default function EventsPage() {
           </span>
         </div>
       </div>
-      
+
       {/* Events list */}
       <div>
         {isLoading ? (
@@ -231,24 +265,24 @@ export default function EventsPage() {
         ) : activeTab === 2 ? (
           // Active events
           activeEvents.length > 0 ? (
-            activeEvents.map(event => (
+            activeEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))
           ) : (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">لا توجد مناسبات نشطة</div>
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+              لا توجد مناسبات نشطة
+            </div>
           )
+        ) : // Past events
+        pastEvents.length > 0 ? (
+          pastEvents.map((event) => <EventCard key={event.id} event={event} />)
         ) : (
-          // Past events
-          pastEvents.length > 0 ? (
-            pastEvents.map(event => (
-              <EventCard key={event.id} event={event} />
-            ))
-          ) : (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">لا توجد مناسبات منتهية</div>
-          )
+          <div className="text-center p-8 bg-gray-50 rounded-lg">
+            لا توجد مناسبات منتهية
+          </div>
         )}
       </div>
-      
+
       {/* Add Event Button */}
       <div className="fixed bottom-20 left-4">
         <Button
@@ -267,79 +301,91 @@ function EventCard({ event }: { event: Event }) {
   const { getCategory } = useCategories();
   const [, setLocation] = useLocation();
   const category = getCategory(event.category);
-  
+
   // Default color if category not found
   const color = category?.color || 'blue';
-  
+
   // Color mapping
-  const colorMap: Record<string, { border: string, bg: string, text: string, lightBg: string, tagBg: string, tagText: string }> = {
-    'blue': { 
-      border: 'border-blue-600', 
-      bg: 'bg-blue-600', 
+  const colorMap: Record<
+    string,
+    {
+      border: string;
+      bg: string;
+      text: string;
+      lightBg: string;
+      tagBg: string;
+      tagText: string;
+    }
+  > = {
+    blue: {
+      border: 'border-blue-600',
+      bg: 'bg-blue-600',
       lightBg: 'bg-blue-50',
       text: 'text-white',
       tagBg: 'bg-blue-50',
-      tagText: 'text-blue-600'
+      tagText: 'text-blue-600',
     },
-    'green': { 
-      border: 'border-green-600', 
+    green: {
+      border: 'border-green-600',
       bg: 'bg-green-600',
-      lightBg: 'bg-green-50', 
+      lightBg: 'bg-green-50',
       text: 'text-white',
       tagBg: 'bg-green-50',
-      tagText: 'text-green-600'
+      tagText: 'text-green-600',
     },
-    'purple': { 
-      border: 'border-purple-600', 
+    purple: {
+      border: 'border-purple-600',
       bg: 'bg-purple-600',
-      lightBg: 'bg-purple-50', 
+      lightBg: 'bg-purple-50',
       text: 'text-white',
       tagBg: 'bg-purple-50',
-      tagText: 'text-purple-600'
+      tagText: 'text-purple-600',
     },
-    'red': { 
-      border: 'border-red-600', 
+    red: {
+      border: 'border-red-600',
       bg: 'bg-red-600',
-      lightBg: 'bg-red-50', 
+      lightBg: 'bg-red-50',
       text: 'text-white',
       tagBg: 'bg-red-50',
-      tagText: 'text-red-600'
+      tagText: 'text-red-600',
     },
-    'orange': { 
-      border: 'border-orange-600', 
+    orange: {
+      border: 'border-orange-600',
       bg: 'bg-orange-600',
-      lightBg: 'bg-orange-50', 
+      lightBg: 'bg-orange-50',
       text: 'text-white',
       tagBg: 'bg-orange-50',
-      tagText: 'text-orange-600'
+      tagText: 'text-orange-600',
     },
-    'teal': { 
-      border: 'border-teal-600', 
+    teal: {
+      border: 'border-teal-600',
       bg: 'bg-teal-600',
-      lightBg: 'bg-teal-50', 
+      lightBg: 'bg-teal-50',
       text: 'text-white',
       tagBg: 'bg-teal-50',
-      tagText: 'text-teal-600'
-    }
+      tagText: 'text-teal-600',
+    },
   };
-  
+
   const styles = colorMap[color] || colorMap['blue'];
   const isPastEvent = event.days <= 0;
-  
+
   // عرض مختلف للمناسبات المنتهية (مع دائرة مطفية)
   if (isPastEvent) {
     return (
-      <div 
+      <div
         className={`mb-4 bg-white rounded-lg shadow-sm overflow-hidden border-r-[6px] border-gray-300 cursor-pointer hover:shadow-md transition-shadow`}
         onClick={() => setLocation(`/events/${event.id}`)}
       >
         <div className="flex flex-row-reverse">
           <div className="bg-gray-100 text-gray-500 flex flex-col items-center justify-center p-3 min-w-[80px]">
             <span className="text-xs font-medium mb-1">قبل</span>
-            <span className="text-xl font-bold">{toArabicNumerals(Math.abs(event.days))}</span>
+            <span className="text-xl font-bold">
+              {toArabicNumerals(Math.abs(event.days))}
+            </span>
             <span className="text-xs font-medium">يوم</span>
           </div>
-          
+
           <div className="flex-1 p-3 ml-2 text-right">
             <div className="flex justify-between mb-1 items-start">
               <span className="text-xs py-0.5 px-2 rounded-full bg-gray-100 text-gray-500">
@@ -347,7 +393,7 @@ function EventCard({ event }: { event: Event }) {
               </span>
               <h3 className="text-md font-bold text-gray-500">{event.title}</h3>
             </div>
-            
+
             <div className="flex flex-col gap-1">
               <div className="flex flex-col gap-1 text-gray-500 text-xs">
                 <div className="flex gap-2 justify-end">
@@ -376,30 +422,36 @@ function EventCard({ event }: { event: Event }) {
       </div>
     );
   }
-  
+
   // العرض الأساسي للمناسبات النشطة مع دائرة أكثر وضوحاً
   return (
-    <div 
+    <div
       className={`mb-4 bg-white rounded-lg shadow overflow-hidden border-r-[6px] ${styles.border} cursor-pointer hover:shadow-md transition-shadow`}
       onClick={() => setLocation(`/events/${event.id}`)}
     >
       <div className="flex flex-row-reverse">
-        <div className={`${styles.bg} ${styles.text} flex flex-col items-center justify-center p-4 min-w-[85px]`}>
+        <div
+          className={`${styles.bg} ${styles.text} flex flex-col items-center justify-center p-4 min-w-[85px]`}
+        >
           <span className="text-xs font-medium mb-1">متبقي</span>
           <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
-            <span className="text-2xl font-bold">{toArabicNumerals(event.days)}</span>
+            <span className="text-2xl font-bold">
+              {toArabicNumerals(event.days)}
+            </span>
           </div>
           <span className="text-xs font-medium mt-1">يوم</span>
         </div>
-        
+
         <div className="flex-1 p-3 ml-2 text-right">
           <div className="flex justify-between mb-1 items-start">
-            <span className={`text-xs py-0.5 px-2 rounded-full ${styles.tagBg} ${styles.tagText}`}>
+            <span
+              className={`text-xs py-0.5 px-2 rounded-full ${styles.tagBg} ${styles.tagText}`}
+            >
               {category?.name || 'غير مصنف'}
             </span>
             <h3 className="text-md font-bold">{event.title}</h3>
           </div>
-          
+
           <div className="flex flex-col gap-1">
             <div className="flex flex-col gap-1 text-gray-500 text-xs">
               <div className="flex gap-2 justify-end">

@@ -1,5 +1,5 @@
 {
-  "id": "64dd5da3-59e6-487b-a2f1-31bf746d528c",
+  "id": "7b513af3-27c6-4a25-81a7-5bb915361015",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -36,37 +36,37 @@
           "name": "hijri_day",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "hijri_month": {
           "name": "hijri_month",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "hijri_year": {
           "name": "hijri_year",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "gregorian_day": {
           "name": "gregorian_day",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "gregorian_month": {
           "name": "gregorian_month",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "gregorian_year": {
           "name": "gregorian_year",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "event_time": {
           "name": "event_time",

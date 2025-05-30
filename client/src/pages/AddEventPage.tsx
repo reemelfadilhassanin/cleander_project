@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import HijriDate from 'hijri-date/lib/safe';
+
 import {
   ArrowRight,
   Calendar,
@@ -34,12 +37,6 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-
-// Import the HijriDate library
-import HijriDate from 'hijri-date';
-
-// NOTE: The approximate hijriMonthLengths map is now removed as we use HijriDate library for accuracy.
-// The hijriToGregorianApprox function is still a rough estimate; for accuracy, use a robust library or backend conversion.
 
 const eventSchema = z.object({
   title: z.string().min(2, 'العنوان يجب أن يكون على الأقل حرفين'),
@@ -246,11 +243,9 @@ export default function AddEventPage() {
 
     const { hijriDay, hijriMonth, hijriYear } = values.date;
 
-    // Use HijriDate to get accurate max days for validation
     let actualMaxDaysInMonth;
     try {
-      const hijriCalendar = new HijriDate(hijriYear, hijriMonth, 1);
-      actualMaxDaysInMonth = hijriCalendar.daysInMonth();
+      actualMaxDaysInMonth = getDaysInHijriMonth(hijriMonth, hijriYear);
     } catch (error) {
       console.error('Error during submission validation:', error);
       actualMaxDaysInMonth = 30; // Fallback
@@ -269,46 +264,40 @@ export default function AddEventPage() {
 
     let datePayload;
     if (isHijri) {
-      // إرسال القيم الهجرية فقط عند isHijri = true
       datePayload = {
-        hijriDay: values.date.hijriDay,
-        hijriMonth: values.date.hijriMonth,
-        hijriYear: values.date.hijriYear,
+        hijriDay,
+        hijriMonth,
+        hijriYear,
         isHijri: true,
       };
     } else {
-      // تحويل التاريخ الهجري إلى ميلادي قبل الإرسال
-      const hijriDate = new HijriDate(
-        values.date.hijriYear,
-        values.date.hijriMonth,
-        values.date.hijriDay
-      );
+      const hijriDate = new HijriDate(hijriYear, hijriMonth, hijriDay);
       const gregorianDate = hijriDate.toGregorian();
 
-if (isNaN(gregorianDate.getTime())) {
-  toast({
-    title: 'خطأ في التاريخ',
-    description: 'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
-    variant: 'destructive',
-  });
-  setIsSubmitting(false);
-  return;
-}
+      if (isNaN(gregorianDate.getTime())) {
+        toast({
+          title: 'خطأ في التاريخ',
+          description:
+            'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-datePayload = {
-  gregorianDay: gregorianDate.getDate(),
-  gregorianMonth: gregorianDate.getMonth() + 1,
-  gregorianYear: gregorianDate.getFullYear(),
-  isHijri: false,
-};
-
+      datePayload = {
+        gregorianDay: gregorianDate.getDate(),
+        gregorianMonth: gregorianDate.getMonth() + 1,
+        gregorianYear: gregorianDate.getFullYear(),
+        isHijri: false,
+      };
     }
 
     const payloadToSend = {
       title: values.title,
       category: values.category,
       date: datePayload,
-      days: values.days, // Ensure this field is used or remove if not
+      days: values.days,
       time: values.time,
       notes: values.notes,
     };
@@ -457,18 +446,23 @@ datePayload = {
                         onClick={() => setIsDateDialogOpen(true)}
                       >
                         <span>
-               {isHijri
-  ? `${form.getValues().date.hijriDay} ${getHijriMonthName(form.getValues().date.hijriMonth)} ${form.getValues().date.hijriYear} هـ`
-  : new HijriDate(
-      form.getValues().date.hijriYear,
-      form.getValues().date.hijriMonth - 1,
-      form.getValues().date.hijriDay
-    ).toGregorian().toLocaleDateString('ar-SA-u-nu-latn', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }) + ' م'}
-
+                          {isHijri
+                            ? `${
+                                form.getValues().date.hijriDay
+                              } ${getHijriMonthName(
+                                form.getValues().date.hijriMonth
+                              )} ${form.getValues().date.hijriYear} هـ`
+                            : new HijriDate(
+                                form.getValues().date.hijriYear,
+                                form.getValues().date.hijriMonth - 1,
+                                form.getValues().date.hijriDay
+                              )
+                                .toGregorian()
+                                .toLocaleDateString('ar-SA-u-nu-latn', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                }) + ' م'}
                         </span>
                         <Calendar className="h-4 w-4 text-gray-500" />
                       </div>

@@ -353,55 +353,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- إضافة مناسبة جديدة ---
-  app.post('/api/events', requireAuth, async (req, res) => {
-    try {
-      const eventData = req.body as Partial<Event>;
+app.post('/api/events', async (req, res) => {
+  try {
+    const { title, days, date } = req.body;
 
-      // Validate presence of title and date object
-      if (!eventData.title || !eventData.date) {
-        return res
-          .status(400)
-          .json({ message: 'يجب توفير عنوان وتاريخ المناسبة' });
-      }
-
-      // Defensive validation: check hijri date exists and is an object
-      if (
-        !eventData.date ||
-        typeof eventData.date !== 'object' ||
-        !eventData.date.hijri ||
-        typeof eventData.date.hijri !== 'object' ||
-        typeof eventData.date.hijri.day !== 'number' ||
-        typeof eventData.date.hijri.month !== 'number' ||
-        typeof eventData.date.hijri.year !== 'number'
-      ) {
-        return res
-          .status(400)
-          .json({ message: 'تاريخ هجري غير صالح أو مفقود' });
-      }
-
-      // Validate Hijri date is valid according to your rules
-      if (
-        !isValidHijriDate(
-          eventData.date.hijri.day,
-          eventData.date.hijri.month,
-          eventData.date.hijri.year
-        )
-      ) {
-        return res.status(400).json({ message: 'تاريخ هجري غير صالح' });
-      }
-
-      // Create the event associated with the logged-in user
-      const newEvent = await storage.events.create({
-        ...eventData,
-        userId: req.user.id,
-      });
-
-      res.status(201).json(newEvent);
-    } catch (error) {
-      console.error('Error creating event:', error);
-      res.status(500).json({ message: 'حدث خطأ أثناء إنشاء المناسبة' });
+    if (!title || !days || !date?.hijriDay || !date?.hijriMonth || !date?.hijriYear) {
+      return res.status(400).json({ message: 'بيانات غير مكتملة لإنشاء المناسبة' });
     }
-  });
+
+    const event = await storage.createEvent({
+      title,
+      days,
+      userId: req.user.id,
+      hijri_day: date.hijriDay,
+      hijri_month: date.hijriMonth,
+      hijri_year: date.hijriYear,
+    });
+
+    res.status(201).json(event);
+  } catch (error) {
+    console.error('خطأ في إنشاء المناسبة:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء المناسبة' });
+  }
+});
+
 
   // --- حذف مناسبة ---
   app.delete('/api/events/:id', async (req, res) => {
@@ -410,7 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(eventId)) {
         return res.status(400).json({ message: 'معرف المناسبة غير صالح' });
       }
-      await storage.events.delete(eventId);
+      await storage.deleteEvent(eventId);
+
       res.json({ message: 'تم حذف المناسبة بنجاح' });
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -439,7 +415,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'تاريخ هجري غير صالح' });
       }
 
-      const updatedEvent = await storage.events.update(eventId, updateData);
+      const updatedEvent = await storage.updateEvent(eventId, updateData);
+
       res.json(updatedEvent);
     } catch (error) {
       console.error('Error updating event:', error);

@@ -3,12 +3,12 @@ CREATE TABLE "events" (
 	"user_id" integer NOT NULL,
 	"title" text NOT NULL,
 	"description" text,
-	"hijri_day" integer NOT NULL,
-	"hijri_month" integer NOT NULL,
-	"hijri_year" integer NOT NULL,
-	"gregorian_day" integer NOT NULL,
-	"gregorian_month" integer NOT NULL,
-	"gregorian_year" integer NOT NULL,
+	"hijri_day" integer,
+	"hijri_month" integer,
+	"hijri_year" integer,
+	"gregorian_day" integer,
+	"gregorian_month" integer,
+	"gregorian_year" integer,
 	"event_time" time,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
