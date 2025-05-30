@@ -294,6 +294,7 @@ export default function AddEventPage() {
       days: values.days,
       time: values.time,
       notes: values.notes,
+       isHijri: true,
     };
 
     console.log(

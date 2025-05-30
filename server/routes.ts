@@ -384,7 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gregorian_month: date.gregorianMonth,
         gregorian_year: date.gregorianYear,
 
-        event_time: time, // مثال: "14:30"
+        event_time: time,
+        is_hijri: date.isHijri,
       });
 
       res.status(201).json(event);
