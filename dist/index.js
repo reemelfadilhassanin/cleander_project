@@ -407,6 +407,12 @@ async function comparePasswords(supplied, stored) {
   const suppliedBuf = await scryptAsync(supplied, salt, 64);
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
+function requireAuth(req, res, next) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(401).json({ message: "\u063A\u064A\u0631 \u0645\u0635\u0631\u062D" });
+  }
+  next();
+}
 function setupAuth(app2) {
   const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString("hex");
   const sessionSettings = {
@@ -1051,7 +1057,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0627\u062A" });
     }
   });
-  app2.post("/api/events", async (req, res) => {
+  app2.post("/api/events", requireAuth, async (req, res) => {
     try {
       const { title, days, date: date2 } = req.body;
       if (!title || !days || !date2?.hijriDay || !date2?.hijriMonth || !date2?.hijriYear) {
