@@ -424,8 +424,8 @@ function setupAuth(app2) {
       maxAge: 30 * 24 * 60 * 60 * 1e3,
       // 30 days
       httpOnly: true,
-      secure: false,
-      sameSite: "lax"
+      secure: true,
+      sameSite: "none"
     }
   };
   app2.set("trust proxy", 1);
@@ -1059,8 +1059,8 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/events", requireAuth, async (req, res) => {
     try {
-      const { title, days, date: date2 } = req.body;
-      if (!title || !days || !date2?.hijriDay || !date2?.hijriMonth || !date2?.hijriYear) {
+      const { title, days, date: date2, time: time2 } = req.body;
+      if (!title || !days || !date2?.hijriDay || !date2?.hijriMonth || !date2?.hijriYear || !date2?.gregorianDay || !date2?.gregorianMonth || !date2?.gregorianYear) {
         return res.status(400).json({ message: "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629" });
       }
       const event = await storage.createEvent({
@@ -1069,7 +1069,12 @@ async function registerRoutes(app2) {
         userId: req.user.id,
         hijri_day: date2.hijriDay,
         hijri_month: date2.hijriMonth,
-        hijri_year: date2.hijriYear
+        hijri_year: date2.hijriYear,
+        gregorian_day: date2.gregorianDay,
+        gregorian_month: date2.gregorianMonth,
+        gregorian_year: date2.gregorianYear,
+        event_time: time2
+        // مثال: "14:30"
       });
       res.status(201).json(event);
     } catch (error) {
