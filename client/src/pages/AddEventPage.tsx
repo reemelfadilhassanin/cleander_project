@@ -285,9 +285,20 @@ export default function AddEventPage() {
       );
       const gregorianDate = hijriDate.toGregorian();
 
+      if (isNaN(gregorianDate.getTime())) {
+        toast({
+          title: 'خطأ في التاريخ',
+          description:
+            'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       datePayload = {
         gregorianDay: gregorianDate.getDate(),
-        gregorianMonth: gregorianDate.getMonth(),
+        gregorianMonth: gregorianDate.getMonth() + 1,
         gregorianYear: gregorianDate.getFullYear(),
         isHijri: false,
       };
@@ -452,15 +463,17 @@ export default function AddEventPage() {
                               } ${getHijriMonthName(
                                 form.getValues().date.hijriMonth
                               )} ${form.getValues().date.hijriYear} هـ`
-                            : hijriToGregorianApprox(
+                            : new HijriDate(
                                 form.getValues().date.hijriYear,
-                                form.getValues().date.hijriMonth,
+                                form.getValues().date.hijriMonth - 1,
                                 form.getValues().date.hijriDay
-                              ).toLocaleDateString('ar-SA-u-nu-latn', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                              }) + ' م'}
+                              )
+                                .toGregorian()
+                                .toLocaleDateString('ar-SA-u-nu-latn', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                }) + ' م'}
                         </span>
                         <Calendar className="h-4 w-4 text-gray-500" />
                       </div>
