@@ -262,36 +262,30 @@ export default function AddEventPage() {
       return;
     }
 
-    let datePayload;
-    if (isHijri) {
-      datePayload = {
-        hijriDay,
-        hijriMonth,
-        hijriYear,
-        isHijri: true,
-      };
-    } else {
-      const hijriDate = new HijriDate(hijriYear, hijriMonth, hijriDay);
-      const gregorianDate = hijriDate.toGregorian();
+    // ✅ Always calculate Gregorian date
+    const hijriDate = new HijriDate(hijriYear, hijriMonth - 1, hijriDay);
+    const gregorianDate = hijriDate.toGregorian();
 
-      if (isNaN(gregorianDate.getTime())) {
-        toast({
-          title: 'خطأ في التاريخ',
-          description:
-            'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
-          variant: 'destructive',
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      datePayload = {
-        gregorianDay: gregorianDate.getDate(),
-        gregorianMonth: gregorianDate.getMonth() + 1,
-        gregorianYear: gregorianDate.getFullYear(),
-        isHijri: false,
-      };
+    if (isNaN(gregorianDate.getTime())) {
+      toast({
+        title: 'خطأ في التاريخ',
+        description:
+          'فشل في تحويل التاريخ الهجري إلى ميلادي. تأكد من صحة اليوم والشهر.',
+        variant: 'destructive',
+      });
+      setIsSubmitting(false);
+      return;
     }
+
+    const datePayload = {
+      hijriDay,
+      hijriMonth,
+      hijriYear,
+      gregorianDay: gregorianDate.getDate(),
+      gregorianMonth: gregorianDate.getMonth() + 1,
+      gregorianYear: gregorianDate.getFullYear(),
+      isHijri, // true or false depending on current UI toggle
+    };
 
     const payloadToSend = {
       title: values.title,
@@ -303,9 +297,10 @@ export default function AddEventPage() {
     };
 
     console.log(
-      'Payload being sent to API:',
+      '📦 Payload being sent to API:',
       JSON.stringify(payloadToSend, null, 2)
     );
+
     addEventMutation.mutate(payloadToSend);
   };
 
