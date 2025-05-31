@@ -6,7 +6,8 @@
   "scripts": {
     "build": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
-    "start": "cross-env NODE_ENV=production node dist/index.js",
+    "start": "NODE_ENV=production node dist/index.js",
+
     "check": "tsc",
     "drizzle:generate": "drizzle-kit generate",
     "drizzle:migrate": "drizzle-kit migrate",
@@ -14,6 +15,7 @@
     "client": "vite --config vite.config.ts"
   },
   "dependencies": {
+     "cross-env": "^7.0.3",
      "esbuild": "^0.25.5",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
