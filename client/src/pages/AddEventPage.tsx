@@ -117,7 +117,10 @@ export default function AddEventPage() {
   const [maxDaysInSelectedMonth, setMaxDaysInSelectedMonth] = useState(30); // Default, will be updated by effect
 
   const [_, setLocation] = useLocation();
-  const { categories } = useCategories();
+  const [categories, setCategories] = useState<
+    { id: string; name: string; color: string; default?: boolean }[]
+  >([]);
+
   const { toast } = useToast();
 
   const defaultCategory =
@@ -141,6 +144,29 @@ export default function AddEventPage() {
   });
 
   const queryClient = useQueryClient();
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/categories', {
+          headers: {
+            'Content-Type': 'application/json',
+            // Authorization: 'Bearer <your-token>' // أضف التوكن هنا إذا كان API يتطلب توثيق
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('فشل في جلب الفئات');
+        }
+
+        const data = await res.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('خطأ أثناء جلب الفئات:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Effect to update max days when selected month/year in dialog changes
   useEffect(() => {
@@ -294,7 +320,7 @@ export default function AddEventPage() {
       days: values.days,
       time: values.time,
       notes: values.notes,
-       isHijri: true,
+      isHijri: true,
     };
 
     console.log(
@@ -411,6 +437,7 @@ export default function AddEventPage() {
                           ))}
                         </SelectContent>
                       </Select>
+
                       <FormMessage />
                     </FormItem>
                   )}
