@@ -146,13 +146,16 @@ export default function AddEventPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('/api/categories', {
-          headers: {
-            'Content-Type': 'application/json',
-            // Authorization: 'Bearer <your-token>' // أضف التوكن هنا إذا كان API يتطلب توثيق
-          },
-          credentials: 'include',
-        });
+        const res = await fetch(
+          'https://cleander-project-back.onrender.com/api/categories',
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              // Authorization: 'Bearer <your-token>' // أضف التوكن هنا إذا كان API يتطلب توثيق
+            },
+            credentials: 'include',
+          }
+        );
 
         if (!res.ok) {
           throw new Error('فشل في جلب الفئات');
