@@ -67,8 +67,8 @@ function log(message, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 async function setupVite(app2, server) {
-  const { createServer: createViteServer, createLogger: createLogger2 } = await import("vite");
-  const viteLogger2 = createLogger2();
+  const { createServer: createViteServer, createLogger } = await import("vite");
+  const viteLogger = createLogger();
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -78,9 +78,9 @@ async function setupVite(app2, server) {
     ...vite_config_default,
     configFile: false,
     customLogger: {
-      ...viteLogger2,
+      ...viteLogger,
       error: (msg, options) => {
-        viteLogger2.error(msg, options);
+        viteLogger.error(msg, options);
         process.exit(1);
       }
     },
@@ -124,14 +124,13 @@ function serveStatic(app2) {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
-var __filename2, __dirname2, viteLogger;
+var __filename2, __dirname2;
 var init_vite = __esm({
   "server/vite.ts"() {
     "use strict";
     init_vite_config();
     __filename2 = fileURLToPath2(import.meta.url);
     __dirname2 = dirname2(__filename2);
-    viteLogger = createLogger();
   }
 });
 
