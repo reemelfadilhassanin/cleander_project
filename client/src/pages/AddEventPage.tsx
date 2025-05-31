@@ -9,29 +9,13 @@ import HijriDate from 'hijri-date/lib/safe';
 import {
   ArrowRight,
   Calendar,
-  // Clock as ClockIcon, // ClockIcon seems unused in the form
+  Clock as ClockIcon, // Keep ClockIcon as it's used
   Edit2,
   Pencil,
   RefreshCw,
 } from 'lucide-react';
-
-// Assuming these are available from your project structure
-// Ensure CalendarDate is defined appropriately in your project
-// e.g. in @/lib/api.ts or a types file
-// export interface CalendarDate {
-//   hijriDay?: number;
-//   hijriMonthName?: string;
-//   hijriMonthNumeric?: number;
-//   hijriYear?: number;
-//   gregorianDay?: number;
-//   gregorianMonthName?: string;
-//   gregorianMonthNumeric?: number;
-//   gregorianYear?: number;
-//   weekDayName?: string;
-// }
-import { convertDate, CalendarDate } from '@/lib/api';
-import { toArabicNumerals } from '@/lib/dateUtils';
-
+import { useCategories } from '@/context/CategoryContext'; // Kept as it was in your provided code
+import { apiRequest } from '@/lib/queryClient';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,11 +41,7 @@ import {
   DialogTitle,
   DialogHeader,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { apiRequest } from '@/lib/queryClient';
-// import { useCategories } from '@/context/CategoryContext'; // This was in your original code but not used. Removed for now.
+} from '@/components/ui/dialog'; // Keep Dialog parts
 
 const eventSchema = z.object({
   title: z.string().min(2, 'العنوان يجب أن يكون على الأقل حرفين'),
@@ -69,17 +49,17 @@ const eventSchema = z.object({
   date: z.object({
     hijriMonth: z.number().min(1).max(12),
     hijriYear: z.number().min(1300).max(1600), // Adjusted range
-    hijriDay: z.number().min(1).max(30), // Max day validation is dynamic in dialog and onSubmit
+    hijriDay: z.number().min(1).max(30),
   }),
   days: z.number().min(1).max(365),
   time: z.string().min(1, 'الرجاء اختيار الوقت'),
   notes: z.string().optional(),
 });
 
-const todayInitialHijri = new HijriDate(); // For default dates
-const const_CURRENT_HIJRI_YEAR_PLACEHOLDER = todayInitialHijri.getFullYear();
-const const_CURRENT_HIJRI_MONTH_PLACEHOLDER = todayInitialHijri.getMonth() + 1; // HijriDate month is 0-indexed for getMonth()
-const const_CURRENT_HIJRI_DAY_PLACEHOLDER = todayInitialHijri.getDate();
+const todayGlobalHijri = new HijriDate(); // Use a different name to avoid conflict inside component
+const const_CURRENT_HIJRI_YEAR_PLACEHOLDER = todayGlobalHijri.getFullYear();
+const const_CURRENT_HIJRI_MONTH_PLACEHOLDER = todayGlobalHijri.getMonth() + 1;
+const const_CURRENT_HIJRI_DAY_PLACEHOLDER = todayGlobalHijri.getDate();
 
 function getHijriMonthName(month: number): string {
   const hijriMonthNames = [
@@ -99,95 +79,53 @@ function getHijriMonthName(month: number): string {
   return hijriMonthNames[month - 1] || `شهر ${month}`;
 }
 
-function getGregorianMonthName(month: number): string {
-  const gregorianMonthNames = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
-  ];
-  return gregorianMonthNames[month - 1] || `شهر ${month}`;
-}
-
 // Removed unused hijriToGregorianApprox function
 
 export default function AddEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isHijri, setIsHijri] = useState(true); // Replaced by converter dialog logic
-  // const [isDateDialogOpen, setIsDateDialogOpen] = useState(false); // Replaced by isConverterDialogOpen
+  const [isHijri, setIsHijri] = useState(true); // State to toggle Hijri/Gregorian display
+  const [isDateDialogOpen, setIsDateDialogOpen] = useState(false); // For the original Hijri picker dialog
 
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [isConverterDialogOpen, setIsConverterDialogOpen] = useState(false);
-  const [activeConversionTab, setActiveConversionTab] = useState<
-    'hijri-to-gregorian' | 'gregorian-to-hijri'
-  >('hijri-to-gregorian');
-
-  const [hijriDateForConverter, setHijriDateForConverter] = useState({
-    day: const_CURRENT_HIJRI_DAY_PLACEHOLDER,
-    month: const_CURRENT_HIJRI_MONTH_PLACEHOLDER,
-    year: const_CURRENT_HIJRI_YEAR_PLACEHOLDER,
-  });
-  const [gregorianDateForConverter, setGregorianDateForConverter] = useState(
-    () => {
-      const gDate = todayInitialHijri.toGregorian();
-      return {
-        day: gDate.getDate(),
-        month: gDate.getMonth() + 1, // JS Date getMonth is 0-indexed
-        year: gDate.getFullYear(),
-      };
-    }
-  );
-  const [convertedApiDate, setConvertedApiDate] = useState<CalendarDate | null>(
-    null
-  );
-  const [maxDaysInConverterHijriMonth, setMaxDaysInConverterHijriMonth] =
-    useState(30);
-  const [
-    maxDaysInConverterGregorianMonth,
-    setMaxDaysInConverterGregorianMonth,
-  ] = useState(31);
-
-  const [categories, setCategories] = useState<
-    { id: string; name: string; color: string; default?: boolean }[]
-  >([]);
-  // const [categoriesLoaded, setCategoriesLoaded] = useState(false); // This state was in your original code but not directly used for logic.
-
+  // --- States for the original Hijri Date Picker Dialog ---
   const searchString = window.location.search;
   const searchParams = new URLSearchParams(searchString);
   const dayParam = searchParams.get('day');
   const monthParam = searchParams.get('month');
   const yearParam = searchParams.get('year');
 
-  const initialHijriDay = dayParam
+  const initialDay = dayParam
     ? parseInt(dayParam, 10)
     : const_CURRENT_HIJRI_DAY_PLACEHOLDER;
-  const initialHijriMonth = monthParam
+  const initialMonth = monthParam
     ? parseInt(monthParam, 10)
     : const_CURRENT_HIJRI_MONTH_PLACEHOLDER;
-  const initialHijriYear = yearParam
+  const initialYear = yearParam
     ? parseInt(yearParam, 10)
     : const_CURRENT_HIJRI_YEAR_PLACEHOLDER;
+
+  const [selectedDay, setSelectedDay] = useState(initialDay);
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
+  const [selectedYear, setSelectedYear] = useState(initialYear);
+  const [maxDaysInSelectedMonth, setMaxDaysInSelectedMonth] = useState(30);
+
+  const [categories, setCategories] = useState<
+    { id: string; name: string; color: string; default?: boolean }[]
+  >([]);
+  // const [categoriesLoaded, setCategoriesLoaded] = useState(false); // This state was in your original code but not directly used for logic.
 
   const form = useForm<z.infer<typeof eventSchema>>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       title: '',
-      category: '', // Default category will be set after categories are fetched
+      category: '',
       date: {
-        hijriDay: initialHijriDay,
-        hijriMonth: initialHijriMonth,
-        hijriYear: initialHijriYear,
+        hijriDay: initialDay,
+        hijriMonth: initialMonth,
+        hijriYear: initialYear,
       },
       days: 1,
       time: '12:00',
@@ -201,7 +139,7 @@ export default function AddEventPage() {
       if (!currentCategoryValue) {
         const defCat =
           categories.find((cat) => cat.default)?.id || categories[0].id;
-        form.setValue('category', defCat);
+        if (defCat) form.setValue('category', defCat);
       }
     }
   }, [categories, form]);
@@ -213,13 +151,13 @@ export default function AddEventPage() {
           'https://cleander-project-server.onrender.com/api/categories',
           {
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Important for cookies if your API uses them
+            credentials: 'include',
           }
         );
         if (!res.ok) throw new Error('فشل في جلب الفئات من الخادم');
         const data = await res.json();
         setCategories(data);
-        // setCategoriesLoaded(true); // Not directly used
+        // setCategoriesLoaded(true);
       } catch (error: any) {
         console.error('خطأ أثناء جلب الفئات:', error);
         toast({
@@ -232,6 +170,7 @@ export default function AddEventPage() {
     fetchCategories();
   }, [toast]);
 
+  // Effect to update form values if URL params are present
   useEffect(() => {
     if (dayParam && monthParam && yearParam) {
       const day = parseInt(dayParam, 10);
@@ -242,331 +181,45 @@ export default function AddEventPage() {
       form.setValue('date.hijriMonth', month);
       form.setValue('date.hijriYear', year);
 
-      setHijriDateForConverter({ day, month, year });
+      // Also update state for the Hijri picker dialog if it's opened
+      setSelectedDay(day);
+      setSelectedMonth(month);
+      setSelectedYear(year);
+    }
+  }, [dayParam, monthParam, yearParam, form]);
+
+  // Effect for the original Hijri Date Picker Dialog: update max days in month
+  useEffect(() => {
+    if (isDateDialogOpen) {
+      // Only calculate when dialog is open or relevant states change
       try {
-        const gDate = new HijriDate(year, month - 1, day).toGregorian();
-        const initialGregorian = {
-          day: gDate.getDate(),
-          month: gDate.getMonth() + 1,
-          year: gDate.getFullYear(),
-        };
-        setGregorianDateForConverter(initialGregorian);
-        setConvertedApiDate({
-          hijriDay: day,
-          hijriMonthNumeric: month,
-          hijriYear: year,
-          gregorianDay: initialGregorian.day,
-          gregorianMonthNumeric: initialGregorian.month,
-          gregorianYear: initialGregorian.year,
-          // You can attempt to get month names here if needed for initial display
-          hijriMonthName: getHijriMonthName(month),
-          gregorianMonthName: getGregorianMonthName(initialGregorian.month),
-          // weekDayName can also be derived if needed
-        });
-      } catch (e) {
+        // Month for HijriDate constructor is 0-indexed
+        const hijriCalendar = new HijriDate(selectedYear, selectedMonth - 1, 1);
+        const daysInMonth = hijriCalendar.daysInMonth();
+        setMaxDaysInSelectedMonth(daysInMonth);
+        if (selectedDay > daysInMonth) {
+          setSelectedDay(daysInMonth); // Adjust if current day exceeds new max
+        }
+      } catch (error) {
         console.error(
-          'Error converting initial params to Gregorian for converter states',
-          e
+          'Error calculating days in Hijri month for dialog:',
+          error
         );
-        // Fallback if HijriDate conversion fails for some reason
-        const todayG = new Date();
-        setGregorianDateForConverter({
-          day: todayG.getDate(),
-          month: todayG.getMonth() + 1,
-          year: todayG.getFullYear(),
-        });
-        setConvertedApiDate(null); // Ensure no stale data
+        setMaxDaysInSelectedMonth(30); // Fallback
       }
-    } else {
-      // If no params, ensure convertedApiDate is initialized from form's default hijri
+    }
+  }, [selectedMonth, selectedYear, selectedDay, isDateDialogOpen]); // Added selectedDay and isDateDialogOpen
+
+  // Effect for the original Hijri Date Picker Dialog: sync with form when opened
+  useEffect(() => {
+    if (isDateDialogOpen) {
       const formDate = form.getValues().date;
-      try {
-        const gDate = new HijriDate(
-          formDate.hijriYear,
-          formDate.hijriMonth - 1,
-          formDate.hijriDay
-        ).toGregorian();
-        setConvertedApiDate({
-          hijriDay: formDate.hijriDay,
-          hijriMonthNumeric: formDate.hijriMonth,
-          hijriYear: formDate.hijriYear,
-          gregorianDay: gDate.getDate(),
-          gregorianMonthNumeric: gDate.getMonth() + 1,
-          gregorianYear: gDate.getFullYear(),
-          hijriMonthName: getHijriMonthName(formDate.hijriMonth),
-          gregorianMonthName: getGregorianMonthName(gDate.getMonth() + 1),
-        });
-      } catch (e) {
-        console.error(
-          'Error setting initial convertedApiDate from defaults',
-          e
-        );
-        setConvertedApiDate(null);
-      }
+      setSelectedDay(formDate.hijriDay);
+      setSelectedMonth(formDate.hijriMonth);
+      setSelectedYear(formDate.hijriYear);
+      // Max days will be set by the other useEffect based on these values
     }
-  }, [dayParam, monthParam, yearParam, form]); // form added as dependency
-
-  // Removed useEffect for isDateDialogOpen as it's replaced
-  // Removed useEffect for selectedDay, selectedMonth, selectedYear as that logic is now in converter dialog
-
-  const convertDateMutation = useMutation<
-    CalendarDate,
-    Error,
-    { date: { year: number; month: number; day: number; isHijri: boolean } }
-  >({
-    mutationFn: async (params) => {
-      return await convertDate(params.date);
-    },
-    onSuccess: (data) => {
-      toast({ title: 'تم التحويل', description: 'تم تحويل التاريخ بنجاح.' });
-      setConvertedApiDate(data);
-      if (data.hijriYear && data.hijriMonthNumeric && data.hijriDay) {
-        setHijriDateForConverter({
-          year: data.hijriYear,
-          month: data.hijriMonthNumeric,
-          day: data.hijriDay,
-        });
-      }
-      if (
-        data.gregorianYear &&
-        data.gregorianMonthNumeric &&
-        data.gregorianDay
-      ) {
-        setGregorianDateForConverter({
-          year: data.gregorianYear,
-          month: data.gregorianMonthNumeric,
-          day: data.gregorianDay,
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: 'خطأ في التحويل',
-        description: error.message || 'فشل في تحويل التاريخ عبر الـ API.',
-        variant: 'destructive',
-      });
-      setConvertedApiDate(null);
-    },
-  });
-
-  const handleTriggerConversion = () => {
-    if (activeConversionTab === 'hijri-to-gregorian') {
-      // Validate Hijri input before sending to API
-      try {
-        new HijriDate(
-          hijriDateForConverter.year,
-          hijriDateForConverter.month - 1,
-          hijriDateForConverter.day
-        );
-        convertDateMutation.mutate({
-          date: { ...hijriDateForConverter, isHijri: true },
-        });
-      } catch (e) {
-        toast({
-          title: 'تاريخ هجري غير صالح',
-          description: 'الرجاء التأكد من اليوم والشهر والسنة.',
-          variant: 'destructive',
-        });
-      }
-    } else {
-      // Validate Gregorian input
-      if (
-        gregorianDateForConverter.day > 0 &&
-        gregorianDateForConverter.day <= 31 &&
-        gregorianDateForConverter.month > 0 &&
-        gregorianDateForConverter.month <= 12 &&
-        gregorianDateForConverter.year > 1000 &&
-        gregorianDateForConverter.year < 3000
-      ) {
-        // Basic validation
-        convertDateMutation.mutate({
-          date: { ...gregorianDateForConverter, isHijri: false },
-        });
-      } else {
-        toast({
-          title: 'تاريخ ميلادي غير صالح',
-          description: 'الرجاء التأكد من اليوم والشهر والسنة.',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    try {
-      const hijriReferenceDate = new HijriDate(
-        hijriDateForConverter.year,
-        hijriDateForConverter.month - 1,
-        1
-      );
-      const days = hijriReferenceDate.daysInMonth();
-      setMaxDaysInConverterHijriMonth(days);
-      if (hijriDateForConverter.day > days) {
-        setHijriDateForConverter((prev) => ({ ...prev, day: days }));
-      }
-    } catch (error) {
-      console.error(
-        'Error calculating days in Hijri month for converter:',
-        error
-      );
-      setMaxDaysInConverterHijriMonth(30);
-    }
-  }, [hijriDateForConverter.month, hijriDateForConverter.year]);
-
-  useEffect(() => {
-    try {
-      const days = new Date(
-        gregorianDateForConverter.year,
-        gregorianDateForConverter.month,
-        0
-      ).getDate();
-      setMaxDaysInConverterGregorianMonth(days);
-      if (gregorianDateForConverter.day > days) {
-        setGregorianDateForConverter((prev) => ({ ...prev, day: days }));
-      }
-    } catch (error) {
-      console.error(
-        'Error calculating days in Gregorian month for converter:',
-        error
-      );
-      setMaxDaysInConverterGregorianMonth(31);
-    }
-  }, [gregorianDateForConverter.month, gregorianDateForConverter.year]);
-
-  const handleOpenConverterDialog = () => {
-    const formDate = form.getValues().date;
-    setHijriDateForConverter({
-      day: formDate.hijriDay,
-      month: formDate.hijriMonth,
-      year: formDate.hijriYear,
-    });
-    try {
-      const gDate = new HijriDate(
-        formDate.hijriYear,
-        formDate.hijriMonth - 1,
-        formDate.hijriDay
-      ).toGregorian();
-      setGregorianDateForConverter({
-        day: gDate.getDate(),
-        month: gDate.getMonth() + 1,
-        year: gDate.getFullYear(),
-      });
-
-      if (
-        convertedApiDate &&
-        convertedApiDate.hijriDay === formDate.hijriDay &&
-        convertedApiDate.hijriMonthNumeric === formDate.hijriMonth &&
-        convertedApiDate.hijriYear === formDate.hijriYear
-      ) {
-        // Keep existing convertedApiDate if it matches the form
-      } else {
-        // If no matching convertedApiDate, generate one from current form values for initial dialog consistency
-        setConvertedApiDate({
-          hijriDay: formDate.hijriDay,
-          hijriMonthNumeric: formDate.hijriMonth,
-          hijriYear: formDate.hijriYear,
-          hijriMonthName: getHijriMonthName(formDate.hijriMonth),
-          gregorianDay: gDate.getDate(),
-          gregorianMonthNumeric: gDate.getMonth() + 1,
-          gregorianYear: gDate.getFullYear(),
-          gregorianMonthName: getGregorianMonthName(gDate.getMonth() + 1),
-          // weekDayName could be derived: new Date(gDate).toLocaleDateString('ar-SA', { weekday: 'long' })
-        });
-      }
-    } catch (e) {
-      console.error('Error setting initial Gregorian for converter dialog', e);
-      const todayG = new Date();
-      setGregorianDateForConverter({
-        day: todayG.getDate(),
-        month: todayG.getMonth() + 1,
-        year: todayG.getFullYear(),
-      });
-      // Set convertedApiDate based on form's Hijri if G conversion fails for dialog init
-      setConvertedApiDate({
-        hijriDay: formDate.hijriDay,
-        hijriMonthNumeric: formDate.hijriMonth,
-        hijriYear: formDate.hijriYear,
-        hijriMonthName: getHijriMonthName(formDate.hijriMonth),
-      });
-    }
-    setActiveConversionTab('hijri-to-gregorian');
-    setIsConverterDialogOpen(true);
-  };
-
-  const handleConfirmConverterDialog = () => {
-    let dateToConfirm: CalendarDate | null = null;
-
-    if (
-      convertedApiDate &&
-      convertedApiDate.hijriYear &&
-      convertedApiDate.hijriMonthNumeric &&
-      convertedApiDate.hijriDay
-    ) {
-      // Prefer API converted date if available and complete for Hijri
-      dateToConfirm = convertedApiDate;
-    } else if (activeConversionTab === 'hijri-to-gregorian') {
-      // If Hijri tab was active, and no API result, use the Hijri input from dialog
-      // And try to get its Gregorian equivalent for display
-      try {
-        const gEquiv = new HijriDate(
-          hijriDateForConverter.year,
-          hijriDateForConverter.month - 1,
-          hijriDateForConverter.day
-        ).toGregorian();
-        dateToConfirm = {
-          hijriDay: hijriDateForConverter.day,
-          hijriMonthNumeric: hijriDateForConverter.month,
-          hijriYear: hijriDateForConverter.year,
-          hijriMonthName: getHijriMonthName(hijriDateForConverter.month),
-          gregorianDay: gEquiv.getDate(),
-          gregorianMonthNumeric: gEquiv.getMonth() + 1,
-          gregorianYear: gEquiv.getFullYear(),
-          gregorianMonthName: getGregorianMonthName(gEquiv.getMonth() + 1),
-        };
-      } catch (e) {
-        toast({
-          title: 'تاريخ هجري غير صالح',
-          description: 'لا يمكن تأكيد التاريخ الهجري المدخل.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    } else if (activeConversionTab === 'gregorian-to-hijri') {
-      // If Gregorian tab was active, we expect an API conversion to have happened.
-      // If not, it implies user typed Gregorian but didn't hit "Convert".
-      // For simplicity, we require "Convert" to have been pressed if G input.
-      // Or, we could attempt conversion here:
-      // This path is less likely if convertedApiDate is the main source.
-      toast({
-        title: 'تأكيد غير ممكن',
-        description:
-          "يرجى الضغط على زر 'تحويل' أولاً إذا أدخلت تاريخاً ميلادياً.",
-        variant: 'warning',
-      });
-      return;
-    }
-
-    if (
-      dateToConfirm &&
-      dateToConfirm.hijriDay &&
-      dateToConfirm.hijriMonthNumeric &&
-      dateToConfirm.hijriYear
-    ) {
-      form.setValue('date.hijriDay', dateToConfirm.hijriDay);
-      form.setValue('date.hijriMonth', dateToConfirm.hijriMonthNumeric);
-      form.setValue('date.hijriYear', dateToConfirm.hijriYear);
-      setConvertedApiDate(dateToConfirm); // Update the main display state
-      form.trigger('date');
-      setIsConverterDialogOpen(false);
-    } else {
-      toast({
-        title: 'خطأ',
-        description:
-          'لا يمكن تأكيد التاريخ. يرجى المحاولة مرة أخرى أو التأكد من صحة البيانات.',
-        variant: 'destructive',
-      });
-    }
-  };
+  }, [isDateDialogOpen, form]);
 
   const addEventMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -612,12 +265,9 @@ export default function AddEventPage() {
 
     let actualMaxDaysInMonth;
     try {
-      // Validate against HijriDate library which is robust for month days
-      actualMaxDaysInMonth = new HijriDate(
-        hijriYear,
-        hijriMonth - 1,
-        hijriDay
-      ).daysInMonth();
+      // Validate against HijriDate library
+      const tempHijriDate = new HijriDate(hijriYear, hijriMonth - 1, 1); // Month is 0-indexed for constructor
+      actualMaxDaysInMonth = tempHijriDate.daysInMonth();
     } catch (error) {
       console.error('Error during submission validation (daysInMonth):', error);
       form.setError('date.hijriDay', {
@@ -639,61 +289,47 @@ export default function AddEventPage() {
       return;
     }
 
-    let gregorianPayloadDay, gregorianPayloadMonth, gregorianPayloadYear;
-    if (
-      convertedApiDate &&
-      convertedApiDate.hijriDay === hijriDay &&
-      convertedApiDate.hijriMonthNumeric === hijriMonth &&
-      convertedApiDate.hijriYear === hijriYear &&
-      convertedApiDate.gregorianDay &&
-      convertedApiDate.gregorianMonthNumeric &&
-      convertedApiDate.gregorianYear
-    ) {
-      gregorianPayloadDay = convertedApiDate.gregorianDay;
-      gregorianPayloadMonth = convertedApiDate.gregorianMonthNumeric;
-      gregorianPayloadYear = convertedApiDate.gregorianYear;
-    } else {
-      try {
-        const hijriDateForSubmit = new HijriDate(
-          hijriYear,
-          hijriMonth - 1,
-          hijriDay
-        );
-        const gregorianDateForSubmit = hijriDateForSubmit.toGregorian();
-        if (isNaN(gregorianDateForSubmit.getTime()))
-          throw new Error('Invalid Gregorian date derived');
-        gregorianPayloadDay = gregorianDateForSubmit.getDate();
-        gregorianPayloadMonth = gregorianDateForSubmit.getMonth() + 1;
-        gregorianPayloadYear = gregorianDateForSubmit.getFullYear();
-      } catch (error) {
-        toast({
-          title: 'خطأ في التاريخ',
-          description:
-            'فشل في تحويل التاريخ الهجري إلى ميلادي للارسال. تأكد من صحة اليوم والشهر والسنة.',
-          variant: 'destructive',
-        });
-        setIsSubmitting(false);
-        return;
-      }
+    let gregorianDateForPayload: Date;
+    try {
+      const hijriDateForSubmit = new HijriDate(
+        hijriYear,
+        hijriMonth - 1,
+        hijriDay
+      ); // Month is 0-indexed
+      gregorianDateForPayload = hijriDateForSubmit.toGregorian();
+      if (isNaN(gregorianDateForPayload.getTime()))
+        throw new Error('Invalid Gregorian date derived');
+    } catch (error) {
+      toast({
+        title: 'خطأ في التاريخ',
+        description:
+          'فشل في تحويل التاريخ الهجري إلى ميلادي للإرسال. تأكد من صحة اليوم والشهر والسنة.',
+        variant: 'destructive',
+      });
+      setIsSubmitting(false);
+      return;
     }
 
     const datePayload = {
       hijriDay,
       hijriMonth,
       hijriYear,
-      gregorianDay: gregorianPayloadDay,
-      gregorianMonth: gregorianPayloadMonth,
-      gregorianYear: gregorianPayloadYear,
+      gregorianDay: gregorianDateForPayload.getDate(),
+      gregorianMonth: gregorianDateForPayload.getMonth() + 1, // JS Date getMonth is 0-indexed
+      gregorianYear: gregorianDateForPayload.getFullYear(),
+      // isHijri: isHijri, // You can send the display preference if backend needs it
     };
 
     const payloadToSend = {
       title: values.title,
       categoryId: values.category,
       date: datePayload,
-      days: values.days, // This field was in schema but not UI
+      days: values.days,
       time: values.time,
       notes: values.notes,
-      isHijri: true,
+      isHijri: true, // Or send the actual 'isHijri' state if it represents user's primary input type.
+      // The current 'isHijri' state is for display toggling.
+      // If the form always stores Hijri, then `isHijri: true` for the payload makes sense.
     };
 
     console.log(
@@ -701,6 +337,14 @@ export default function AddEventPage() {
       JSON.stringify(payloadToSend, null, 2)
     );
     addEventMutation.mutate(payloadToSend);
+  };
+
+  const handleDateDialogConfirm = () => {
+    form.setValue('date.hijriDay', selectedDay);
+    form.setValue('date.hijriMonth', selectedMonth);
+    form.setValue('date.hijriYear', selectedYear);
+    form.trigger('date');
+    setIsDateDialogOpen(false);
   };
 
   const formDateValues = form.watch('date');
@@ -735,6 +379,7 @@ export default function AddEventPage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Title */}
               <FormField
                 control={form.control}
                 name="title"
@@ -755,6 +400,7 @@ export default function AddEventPage() {
                 )}
               />
 
+              {/* Category */}
               <FormField
                 control={form.control}
                 name="category"
@@ -776,7 +422,7 @@ export default function AddEventPage() {
                       <SelectContent>
                         {categories.length === 0 && (
                           <SelectItem value="placeholder-disabled" disabled>
-                            لا توجد فئات
+                            جاري تحميل الفئات...
                           </SelectItem>
                         )}
                         {categories.map((category) => (
@@ -802,72 +448,65 @@ export default function AddEventPage() {
                 )}
               />
 
+              {/* Date Field (Original Simpler Version) */}
               <FormField
                 control={form.control}
-                name="date.hijriDay"
+                name="date.hijriDay" // Use one part of the date for react-hook-form to attach errors
                 render={() => (
                   <FormItem>
                     <div className="flex justify-between items-center mb-1">
                       <FormLabel className="text-sm font-medium flex items-center gap-1.5 text-gray-700">
-                        <Calendar className="h-4 w-4 text-blue-600" /> التاريخ
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        التاريخ ({isHijri ? 'هجري' : 'ميلادي'})
                       </FormLabel>
-                      {/* Removed the old toggle button, date type is handled in dialog */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsHijri(!isHijri)}
+                        className="text-xs px-2 py-1 border-gray-300 text-blue-600 hover:bg-blue-50"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        {isHijri ? 'عرض ميلادي' : 'عرض هجري'}
+                      </Button>
                     </div>
                     <div
                       className="flex items-center justify-between border border-gray-300 rounded-md p-2.5 cursor-pointer hover:border-blue-400 text-sm"
-                      onClick={handleOpenConverterDialog}
+                      onClick={() => setIsDateDialogOpen(true)} // Opens the original Hijri picker
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ')
-                          handleOpenConverterDialog();
-                      }} // Added spacebar key
+                          setIsDateDialogOpen(true);
+                      }}
                     >
-                      <span className="truncate">
-                        {' '}
-                        {/* Added truncate for long date strings */}
-                        {convertedApiDate?.hijriDay &&
-                        convertedApiDate?.hijriMonthNumeric &&
-                        convertedApiDate?.hijriYear ? (
-                          <>
-                            {`${toArabicNumerals(convertedApiDate.hijriDay)} ${
-                              convertedApiDate.hijriMonthName ||
-                              getHijriMonthName(
-                                convertedApiDate.hijriMonthNumeric
-                              )
-                            } ${toArabicNumerals(
-                              convertedApiDate.hijriYear
-                            )} هـ`}
-                            {convertedApiDate.gregorianDay &&
-                              convertedApiDate.gregorianMonthNumeric &&
-                              convertedApiDate.gregorianYear && (
-                                <>
-                                  {`  /  `}
-                                  {`${toArabicNumerals(
-                                    convertedApiDate.gregorianDay
-                                  )} ${
-                                    convertedApiDate.gregorianMonthName ||
-                                    getGregorianMonthName(
-                                      convertedApiDate.gregorianMonthNumeric
-                                    )
-                                  } ${toArabicNumerals(
-                                    convertedApiDate.gregorianYear
-                                  )} م`}
-                                </>
-                              )}
-                          </>
-                        ) : (
-                          `${toArabicNumerals(
-                            formDateValues.hijriDay
-                          )} ${getHijriMonthName(
-                            formDateValues.hijriMonth
-                          )} ${toArabicNumerals(
-                            formDateValues.hijriYear
-                          )} هـ (انقر للتعديل)`
-                        )}
+                      <span>
+                        {isHijri
+                          ? `${formDateValues.hijriDay} ${getHijriMonthName(
+                              formDateValues.hijriMonth
+                            )} ${formDateValues.hijriYear} هـ`
+                          : (() => {
+                              try {
+                                // Month for HijriDate constructor is 0-indexed
+                                return (
+                                  new HijriDate(
+                                    formDateValues.hijriYear,
+                                    formDateValues.hijriMonth - 1,
+                                    formDateValues.hijriDay
+                                  )
+                                    .toGregorian()
+                                    .toLocaleDateString('ar-SA-u-nu-latn', {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric',
+                                    }) + ' م'
+                                );
+                              } catch (e) {
+                                return 'تاريخ غير صالح للتحويل'; // Fallback for invalid date
+                              }
+                            })()}
                       </span>
-                      <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />{' '}
-                      {/* Added flex-shrink-0 */}
+                      <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
                     </div>
                     {form.formState.errors.date?.hijriDay && (
                       <FormMessage>
@@ -892,15 +531,15 @@ export default function AddEventPage() {
                   </FormItem>
                 )}
               />
-              {/* Old Date Picker Dialog - Removed as it's replaced by ConverterDialog */}
+
+              {/* Time */}
               <FormField
                 control={form.control}
                 name="time"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium mr-1 mb-1 flex items-center gap-1.5 text-gray-700">
-                      {/* <ClockIcon className="h-4 w-4 text-blue-600" /> */}{' '}
-                      الوقت
+                      <ClockIcon className="h-4 w-4 text-blue-600" /> الوقت
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -913,6 +552,8 @@ export default function AddEventPage() {
                   </FormItem>
                 )}
               />
+
+              {/* Notes */}
               <FormField
                 control={form.control}
                 name="notes"
@@ -966,262 +607,157 @@ export default function AddEventPage() {
         </CardContent>
       </Card>
 
-      <Dialog
-        open={isConverterDialogOpen}
-        onOpenChange={setIsConverterDialogOpen}
-      >
-        <DialogContent className="sm:max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-center text-lg font-semibold">
-              تحويل و اختيار التاريخ
-            </DialogTitle>
-          </DialogHeader>
-          <Tabs
-            value={activeConversionTab}
-            onValueChange={(value) => setActiveConversionTab(value as any)}
-            className="w-full mt-2"
-          >
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="hijri-to-gregorian">
-                هجري إلى ميلادي
-              </TabsTrigger>
-              <TabsTrigger value="gregorian-to-hijri">
-                ميلادي إلى هجري
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="hijri-to-gregorian">
-              <div className="space-y-3 p-1">
-                <div className="grid grid-cols-3 gap-3 items-end">
-                  <div>
-                    <Label
-                      htmlFor="conv-hijri-day"
-                      className="text-xs mb-1 block"
-                    >
-                      اليوم
-                    </Label>
-                    <select
-                      id="conv-hijri-day"
-                      value={hijriDateForConverter.day}
-                      onChange={(e) =>
-                        setHijriDateForConverter((prev) => ({
-                          ...prev,
-                          day: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full p-2 border rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {Array.from(
-                        { length: maxDaysInConverterHijriMonth },
-                        (_, i) => i + 1
-                      ).map((d) => (
-                        <option key={`h-day-${d}`} value={d}>
-                          {toArabicNumerals(d)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="conv-hijri-month"
-                      className="text-xs mb-1 block"
-                    >
-                      الشهر
-                    </Label>
-                    <select
-                      id="conv-hijri-month"
-                      value={hijriDateForConverter.month}
-                      onChange={(e) =>
-                        setHijriDateForConverter((prev) => ({
-                          ...prev,
-                          month: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full p-2 border rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                        <option key={`h-month-${m}`} value={m}>
-                          {getHijriMonthName(m)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="conv-hijri-year"
-                      className="text-xs mb-1 block"
-                    >
-                      السنة
-                    </Label>
-                    <Input
-                      id="conv-hijri-year"
-                      type="number"
-                      min="1300"
-                      max="1600"
-                      value={hijriDateForConverter.year}
-                      onChange={(e) =>
-                        setHijriDateForConverter((prev) => ({
-                          ...prev,
-                          year:
-                            parseInt(e.target.value) ||
-                            const_CURRENT_HIJRI_YEAR_PLACEHOLDER,
-                        }))
-                      }
-                      className="text-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                {convertedApiDate &&
-                  activeConversionTab === 'hijri-to-gregorian' &&
-                  convertedApiDate.gregorianDay && (
-                    <div className="mt-3 pt-3 border-t text-sm bg-gray-50 p-2 rounded-md">
-                      <p className="font-semibold mb-1">
-                        التاريخ الميلادي الموافق:
-                      </p>
-                      <p className="text-blue-600 font-medium">{`${toArabicNumerals(
-                        convertedApiDate.gregorianDay
-                      )} ${
-                        convertedApiDate.gregorianMonthName ||
-                        getGregorianMonthName(
-                          convertedApiDate.gregorianMonthNumeric!
-                        )
-                      } ${toArabicNumerals(
-                        convertedApiDate.gregorianYear!
-                      )} م`}</p>
-                    </div>
-                  )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="gregorian-to-hijri">
-              <div className="space-y-3 p-1">
-                <div className="grid grid-cols-3 gap-3 items-end">
-                  <div>
-                    <Label
-                      htmlFor="conv-gregorian-day"
-                      className="text-xs mb-1 block"
-                    >
-                      اليوم
-                    </Label>
-                    <select
-                      id="conv-gregorian-day"
-                      value={gregorianDateForConverter.day}
-                      onChange={(e) =>
-                        setGregorianDateForConverter((prev) => ({
-                          ...prev,
-                          day: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full p-2 border rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {Array.from(
-                        { length: maxDaysInConverterGregorianMonth },
-                        (_, i) => i + 1
-                      ).map((d) => (
-                        <option key={`g-day-${d}`} value={d}>
-                          {toArabicNumerals(d)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="conv-gregorian-month"
-                      className="text-xs mb-1 block"
-                    >
-                      الشهر
-                    </Label>
-                    <select
-                      id="conv-gregorian-month"
-                      value={gregorianDateForConverter.month}
-                      onChange={(e) =>
-                        setGregorianDateForConverter((prev) => ({
-                          ...prev,
-                          month: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                      className="w-full p-2 border rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                        <option key={`g-month-${m}`} value={m}>
-                          {getGregorianMonthName(m)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="conv-gregorian-year"
-                      className="text-xs mb-1 block"
-                    >
-                      السنة
-                    </Label>
-                    <Input
-                      id="conv-gregorian-year"
-                      type="number"
-                      min="1900"
-                      max="2100" // Adjusted range for Gregorian
-                      value={gregorianDateForConverter.year}
-                      onChange={(e) =>
-                        setGregorianDateForConverter((prev) => ({
-                          ...prev,
-                          year:
-                            parseInt(e.target.value) ||
-                            new Date().getFullYear(),
-                        }))
-                      }
-                      className="text-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                {convertedApiDate &&
-                  activeConversionTab === 'gregorian-to-hijri' &&
-                  convertedApiDate.hijriDay && (
-                    <div className="mt-3 pt-3 border-t text-sm bg-gray-50 p-2 rounded-md">
-                      <p className="font-semibold mb-1">
-                        التاريخ الهجري الموافق:
-                      </p>
-                      <p className="text-blue-600 font-medium">{`${toArabicNumerals(
-                        convertedApiDate.hijriDay
-                      )} ${
-                        convertedApiDate.hijriMonthName ||
-                        getHijriMonthName(convertedApiDate.hijriMonthNumeric!)
-                      } ${toArabicNumerals(
-                        convertedApiDate.hijriYear!
-                      )} هـ`}</p>
-                    </div>
-                  )}
-              </div>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t mt-2">
+      {/* Original Hijri Date Picker Dialog */}
+      <Dialog open={isDateDialogOpen} onOpenChange={setIsDateDialogOpen}>
+        <DialogContent className="p-0 sm:max-w-xs" dir="rtl">
+          <DialogHeader className="bg-emerald-600 text-white p-3 rounded-t-md">
             {' '}
-            {/* Added sm:gap-3 */}
+            {/* Added DialogHeader for styling */}
+            <div className="flex items-center justify-between">
+              <Pencil className="h-5 w-5" />
+              <DialogTitle className="text-lg font-semibold text-center text-white">
+                اختيار التاريخ الهجري
+              </DialogTitle>{' '}
+              {/* Ensure DialogTitle is here */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-emerald-500 h-7 w-7"
+                onClick={() => setIsDateDialogOpen(false)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="p-4 space-y-3">
+            <div className="space-y-1">
+              <Label
+                htmlFor="picker-day"
+                className="block text-xs font-medium text-gray-600"
+              >
+                اليوم
+              </Label>
+              <select
+                id="picker-day"
+                value={selectedDay}
+                onChange={(e) => setSelectedDay(parseInt(e.target.value, 10))}
+                className="block w-full p-2 text-sm rounded-md border-gray-300 shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+              >
+                {Array.from(
+                  { length: maxDaysInSelectedMonth },
+                  (_, i) => i + 1
+                ).map((day) => (
+                  <option key={`picker-day-${day}`} value={day}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="picker-month"
+                className="block text-xs font-medium text-gray-600"
+              >
+                الشهر
+              </Label>
+              <select
+                id="picker-month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
+                className="block w-full p-2 text-sm rounded-md border-gray-300 shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                  <option key={`picker-month-${month}`} value={month}>
+                    {getHijriMonthName(month)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="picker-year"
+                className="block text-xs font-medium text-gray-600"
+              >
+                السنة
+              </Label>
+              <select /* Consider changing to input type number for wider year range or direct input */
+                id="picker-year"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                className="block w-full p-2 text-sm rounded-md border-gray-300 shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+              >
+                {(() => {
+                  const baseYear = const_CURRENT_HIJRI_YEAR_PLACEHOLDER;
+                  const years = [];
+                  for (let i = -10; i <= 10; i++) {
+                    // Expanded year range slightly
+                    const yearValue = baseYear + i;
+                    if (yearValue >= 1350 && yearValue <= 1550) {
+                      // Wider valid range
+                      years.push(
+                        <option
+                          key={`picker-year-${yearValue}`}
+                          value={yearValue}
+                        >
+                          {yearValue}
+                        </option>
+                      );
+                    }
+                  }
+                  // Ensure selectedYear is in the list, if not, add it (edge case if params are outside range)
+                  if (
+                    !years.find((y) => y.props.value === selectedYear) &&
+                    selectedYear >= 1350 &&
+                    selectedYear <= 1550
+                  ) {
+                    years.push(
+                      <option
+                        key={`picker-year-${selectedYear}`}
+                        value={selectedYear}
+                      >
+                        {selectedYear}
+                      </option>
+                    );
+                    years.sort((a, b) => a.props.value - b.props.value); // Keep sorted
+                  }
+                  return years;
+                })()}
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="py-3 px-4 flex justify-end border-t bg-gray-50 rounded-b-md">
+            {' '}
+            {/* Added DialogFooter */}
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setIsConverterDialogOpen(false)}
-              className="w-full sm:w-auto order-3 sm:order-1" // Order for mobile
+              size="sm"
+              className="ml-2"
+              onClick={() => setIsDateDialogOpen(false)}
             >
               إلغاء
             </Button>
             <Button
-              onClick={handleTriggerConversion}
-              disabled={convertDateMutation.isPending}
-              className="w-full sm:w-auto order-2 sm:order-2" // Order for mobile
-              variant="secondary" // Different variant for convert
+              type="button"
+              onClick={handleDateDialogConfirm}
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              <RefreshCw
-                className={`ml-2 h-4 w-4 ${
-                  convertDateMutation.isPending ? 'animate-spin' : ''
-                }`}
-              />
-              {convertDateMutation.isPending ? 'جاري التحويل...' : 'تحويل'}
-            </Button>
-            <Button
-              onClick={handleConfirmConverterDialog}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 order-1 sm:order-3" // Order for mobile
-            >
-              تأكيد و اختيار
+              تأكيد
             </Button>
           </DialogFooter>
         </DialogContent>
