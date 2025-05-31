@@ -88,8 +88,8 @@ export default function EventsPage() {
       const category =
         selectedCategory !== 'all' ? selectedCategory : undefined;
       const response = await fetch(
-        `/api/events`
-      )
+        `https://cleander-project-server.onrender.com/api/events`
+      );
       if (!response.ok) {
         throw new Error('فشل في جلب المناسبات');
       }
@@ -128,13 +128,15 @@ export default function EventsPage() {
   const confirmDeleteAllEvents = () => {
     deleteAllEventsMutation.mutate();
   };
-const filteredEvents = events?.filter(event =>
-  (selectedCategory === 'all' || event.category === selectedCategory) &&
-  event.title.toLowerCase().includes(searchQuery.toLowerCase())
-) || [];
+  const filteredEvents =
+    events?.filter(
+      (event) =>
+        (selectedCategory === 'all' || event.category === selectedCategory) &&
+        event.title.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
-  const activeEvents = filteredEvents.filter(event => event.days > 0);
-const pastEvents = filteredEvents.filter(event => event.days <= 0);
+  const activeEvents = filteredEvents.filter((event) => event.days > 0);
+  const pastEvents = filteredEvents.filter((event) => event.days <= 0);
 
   return (
     <div className="container max-w-md mx-auto p-4 mb-24 text-right">
