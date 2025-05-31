@@ -425,7 +425,7 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
     try {
       const rawEvents = await storage.getUserEvents(req.user.id);
       const today = new Date();
-
+today.setHours(0, 0, 0, 0);
       const formattedUserEvents = rawEvents.map((event) => {
         const {
           hijriDay,
@@ -441,7 +441,7 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
           gregorianMonth - 1,
           gregorianDay
         );
-
+eventDate.setHours(0, 0, 0, 0);
         const days = Math.ceil(
           (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
