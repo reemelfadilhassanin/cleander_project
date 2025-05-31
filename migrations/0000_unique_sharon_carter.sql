@@ -1,3 +1,11 @@
+CREATE TABLE "categories" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"color" text NOT NULL,
+	"is_default" boolean DEFAULT false,
+	"user_id" integer DEFAULT null
+);
+--> statement-breakpoint
 CREATE TABLE "events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
@@ -10,6 +18,8 @@ CREATE TABLE "events" (
 	"gregorian_month" integer,
 	"gregorian_year" integer,
 	"is_hijri" boolean DEFAULT true NOT NULL,
+	"category_id" integer,
+	"days" integer DEFAULT 1 NOT NULL,
 	"event_time" time,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -41,5 +51,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
+ALTER TABLE "categories" ADD CONSTRAINT "categories_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "system_settings" ADD CONSTRAINT "system_settings_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

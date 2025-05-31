@@ -371,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: event.title,
           notes: event.description,
           time: event.eventTime,
-          days,
+          days:  event.days,
           category: event.categoryId || 'uncategorized',
           date: {
             hijri: {

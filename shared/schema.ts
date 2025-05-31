@@ -55,10 +55,21 @@ export const events = pgTable('events', {
   gregorianMonth: integer('gregorian_month'),
   gregorianYear: integer('gregorian_year'),
   isHijri: boolean('is_hijri').notNull().default(true),
-
+categoryId: integer('category_id').references(() => categories.id),
+days: integer('days').default(1).notNull(),
   eventTime: time('event_time'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),              
+  color: text('color').notNull(),          
+  isDefault: boolean('is_default').default(false), 
+  userId: integer('user_id')              
+    .references(() => users.id)
+    .default(null),
+});
+
 
 // System settings model
 export const systemSettings = pgTable('system_settings', {
@@ -74,7 +85,10 @@ export const systemSettings = pgTable('system_settings', {
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   createdAt: true,
+}).extend({
+  days: z.number().min(1).max(365).default(1), 
 });
+
 
 export const insertSystemSettingsSchema = createInsertSchema(
   systemSettings
@@ -82,6 +96,13 @@ export const insertSystemSettingsSchema = createInsertSchema(
   id: true,
   lastUpdated: true,
 });
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+});
+
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
+
 
 // Export types
 export type InsertUser = z.infer<typeof insertUserSchema>;
