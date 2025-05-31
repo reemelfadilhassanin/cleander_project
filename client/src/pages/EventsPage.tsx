@@ -77,13 +77,13 @@ export default function EventsPage() {
 
   // Fetch categories
   const { data: categories } = useQuery<EventCategory[]>({
-    queryKey: ['/api/categories'],
+    queryKey: ['https://cleander-project-server.onrender.com/api/categories'],
     enabled: true,
   });
 
   // Fetch events
   const { data: events, isLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events', selectedCategory],
+    queryKey: ['https://cleander-project-server.onrender.com/api/events', selectedCategory],
     queryFn: async () => {
       const category =
         selectedCategory !== 'all' ? selectedCategory : undefined;
@@ -101,11 +101,11 @@ export default function EventsPage() {
   // Delete all events mutation
   const deleteAllEventsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('DELETE', '/api/events');
+      const response = await apiRequest('DELETE', 'https://cleander-project-server.onrender.com/api/events');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['https://cleander-project-server.onrender.com/api/events'] });
       toast({
         title: 'تم الحذف',
         description: 'تم حذف جميع المناسبات بنجاح',
