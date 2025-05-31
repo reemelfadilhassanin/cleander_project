@@ -13,7 +13,9 @@ import { createServer } from "http";
 // shared/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  categories: () => categories,
   events: () => events,
+  insertCategorySchema: () => insertCategorySchema,
   insertEventSchema: () => insertEventSchema,
   insertSystemSettingsSchema: () => insertSystemSettingsSchema,
   insertUserSchema: () => insertUserSchema,
@@ -30,6 +32,7 @@ import {
   timestamp
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 var users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -68,8 +71,18 @@ var events = pgTable("events", {
   gregorianDay: integer("gregorian_day"),
   gregorianMonth: integer("gregorian_month"),
   gregorianYear: integer("gregorian_year"),
+  isHijri: boolean("is_hijri").notNull().default(true),
+  categoryId: integer("category_id").references(() => categories.id),
+  days: integer("days").default(1).notNull(),
   eventTime: time("event_time"),
   createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  isDefault: boolean("is_default").default(false),
+  userId: integer("user_id").references(() => users.id).default(null)
 });
 var systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
@@ -83,6 +96,8 @@ var systemSettings = pgTable("system_settings", {
 var insertEventSchema = createInsertSchema(events).omit({
   id: true,
   createdAt: true
+}).extend({
+  days: z.number().min(1).max(365).default(1)
 });
 var insertSystemSettingsSchema = createInsertSchema(
   systemSettings
@@ -90,8 +105,12 @@ var insertSystemSettingsSchema = createInsertSchema(
   id: true,
   lastUpdated: true
 });
+var insertCategorySchema = createInsertSchema(categories).omit({
+  id: true
+});
 
 // server/storage.ts
+import { and, or, isNull } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
@@ -126,6 +145,75 @@ var DatabaseStorage = class {
       createTableIfMissing: true,
       tableName: "user_sessions"
     });
+  }
+  async getCategoryById(categoryId, userId) {
+    try {
+      const [category] = await db.select().from(categories).where(
+        and(
+          eq(categories.id, categoryId),
+          or(
+            isNull(categories.userId),
+            // فئة عامة
+            eq(categories.userId, userId)
+            // فئة تخص هذا المستخدم
+          )
+        )
+      );
+      return category;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062C\u0644\u0628 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u062D\u0633\u0628 \u0627\u0644\u0645\u0639\u0631\u0641:", error);
+      return void 0;
+    }
+  }
+  // async getCategoryById(categoryId: number): Promise<Category | undefined> {
+  //   try {
+  //     const [category] = await db
+  //       .select()
+  //       .from(categories)
+  //       .where(eq(categories.id, categoryId));
+  //     return category;
+  //   } catch (error) {
+  //     console.error('خطأ في جلب التصنيف حسب المعرف:', error);
+  //     return undefined;
+  //   }
+  // }
+  // جلب التصنيفات الخاصة بالمستخدم
+  async getUserCategories(userId) {
+    try {
+      return await db.select().from(categories).where(eq(categories.userId, userId)).orderBy(desc(categories.id));
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062C\u0644\u0628 \u062A\u0635\u0646\u064A\u0641\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:", error);
+      return [];
+    }
+  }
+  // إنشاء تصنيف جديد
+  async createCategory(data) {
+    try {
+      const [category] = await db.insert(categories).values(data).returning();
+      return category;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      throw error;
+    }
+  }
+  // تحديث تصنيف موجود
+  async updateCategory(categoryId, updateData) {
+    try {
+      const [updatedCategory] = await db.update(categories).set(updateData).where(eq(categories.id, categoryId)).returning();
+      return updatedCategory;
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      throw error;
+    }
+  }
+  // حذف تصنيف
+  async deleteCategory(categoryId) {
+    try {
+      await db.delete(categories).where(eq(categories.id, categoryId));
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      throw error;
+    }
   }
   async createEvent(eventData) {
     try {
@@ -194,7 +282,10 @@ var DatabaseStorage = class {
       }).from(users).where(eq(users.email, email));
       return user;
     } catch (error) {
-      console.error("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A:", error);
+      console.error(
+        "\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A:",
+        error
+      );
       return void 0;
     }
   }
@@ -415,6 +506,7 @@ function requireAuth(req, res, next) {
 }
 function setupAuth(app2) {
   const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString("hex");
+  const isProduction = process.env.NODE_ENV === "production";
   const sessionSettings = {
     secret: sessionSecret,
     resave: false,
@@ -423,12 +515,16 @@ function setupAuth(app2) {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1e3,
       // 30 days
-      httpOnly: true,
-      secure: true,
-      sameSite: "none"
+      secure: isProduction,
+      // فقط في الإنتاج
+      sameSite: isProduction ? "none" : "lax",
+      // none فقط مع secure: true
+      httpOnly: true
     }
   };
-  app2.set("trust proxy", 1);
+  if (isProduction) {
+    app2.set("trust proxy", 1);
+  }
   app2.use(session2(sessionSettings));
   app2.use(passport.initialize());
   app2.use(passport.session());
@@ -1011,47 +1107,124 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u062A\u0627\u0631\u064A\u062E" });
     }
   });
-  app2.get("/api/categories", (req, res) => {
-    const categories = [
-      { id: "all", name: "\u0627\u0644\u0643\u0644", default: true },
-      { id: "1", name: "\u0623\u0639\u064A\u0627\u062F", color: "green" },
-      { id: "2", name: "\u0645\u0646\u0627\u0633\u0628\u0627\u062A \u0634\u062E\u0635\u064A\u0629", color: "purple" },
-      { id: "3", name: "\u0645\u0648\u0627\u0639\u064A\u062F \u0637\u0628\u064A\u0629", color: "red" },
-      { id: "4", name: "\u0623\u0639\u0645\u0627\u0644", color: "orange" },
-      { id: "5", name: "\u0633\u0641\u0631", color: "teal" }
-    ];
-    res.json(categories);
-  });
-  const defaultEvents = [
-    {
-      id: 1,
-      title: "\u0639\u064A\u062F \u0627\u0644\u0641\u0637\u0631",
-      days: 3,
-      date: {
-        hijri: { day: 1, month: 10, year: 1444, formatted: "01/10/1444" },
-        gregorian: { day: 10, month: 4, year: 2023, formatted: "10/04/2023" }
-      },
-      color: "green",
-      categoryId: "1"
-    },
-    {
-      id: 2,
-      title: "\u0639\u064A\u062F \u0627\u0644\u0623\u0636\u062D\u0649",
-      days: 4,
-      date: {
-        hijri: { day: 10, month: 12, year: 1444, formatted: "10/12/1444" },
-        gregorian: { day: 17, month: 6, year: 2023, formatted: "17/06/2023" }
-      },
-      color: "green",
-      categoryId: "1"
-    }
-    // يمكن إضافة مناسبات أخرى هنا
-  ];
-  app2.get("/api/events", async (req, res) => {
+  app2.get("/api/categories/:id", requireAuth, async (req, res) => {
     try {
-      const userEvents = await storage.getAllEvents();
-      const events2 = [...userEvents, ...defaultEvents];
-      res.json(events2);
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
+      }
+      const category = await storage.getCategoryById(categoryId);
+      if (!category || category.userId !== req.user.id) {
+        return res.status(404).json({ message: "\u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062C\u0644\u0628 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" });
+    }
+  });
+  app2.get("/api/categories", requireAuth, async (req, res) => {
+    try {
+      const categories2 = await storage.getUserCategories(req.user.id);
+      res.json(categories2);
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062C\u0644\u0628 \u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A" });
+    }
+  });
+  app2.post("/api/categories", requireAuth, async (req, res) => {
+    try {
+      const { name, color } = req.body;
+      if (!name || !color) {
+        return res.status(400).json({ message: "\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0644\u0648\u0646 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
+      }
+      const newCategory = await storage.createCategory({
+        name,
+        color,
+        userId: req.user.id
+      });
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" });
+    }
+  });
+  app2.put("/api/categories/:id", requireAuth, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
+      }
+      const updateData = req.body;
+      const updatedCategory = await storage.updateCategory(categoryId, updateData);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" });
+    }
+  });
+  app2.delete("/api/categories/:id", requireAuth, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" });
+      }
+      await storage.deleteCategory(categoryId);
+      res.json({ message: "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u0628\u0646\u062C\u0627\u062D" });
+    } catch (error) {
+      console.error("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" });
+    }
+  });
+  app2.get("/api/events", requireAuth, async (req, res) => {
+    try {
+      const rawEvents = await storage.getUserEvents(req.user.id);
+      const today = /* @__PURE__ */ new Date();
+      const formattedUserEvents = rawEvents.map((event) => {
+        const {
+          hijriDay,
+          hijriMonth,
+          hijriYear,
+          gregorianDay,
+          gregorianMonth,
+          gregorianYear
+        } = event;
+        const eventDate = new Date(
+          gregorianYear,
+          gregorianMonth - 1,
+          gregorianDay
+        );
+        const days = Math.ceil(
+          (eventDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24)
+        );
+        return {
+          id: event.id,
+          title: event.title,
+          notes: event.description,
+          time: event.eventTime,
+          days: event.days,
+          category: event.categoryId || "uncategorized",
+          date: {
+            hijri: {
+              day: hijriDay,
+              month: hijriMonth,
+              year: hijriYear,
+              formatted: `${String(hijriDay).padStart(2, "0")}/${String(
+                hijriMonth
+              ).padStart(2, "0")}/${hijriYear}`
+            },
+            gregorian: {
+              day: gregorianDay,
+              month: gregorianMonth,
+              year: gregorianYear,
+              formatted: `${String(gregorianDay).padStart(2, "0")}/${String(
+                gregorianMonth
+              ).padStart(2, "0")}/${gregorianYear}`
+            }
+          }
+        };
+      });
+      res.json(formattedUserEvents);
     } catch (error) {
       console.error("Error fetching events:", error);
       res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0627\u062A" });
@@ -1059,22 +1232,37 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/events", requireAuth, async (req, res) => {
     try {
-      const { title, days, date: date2, time: time2 } = req.body;
+      const { title, days, date: date2, time: time2, notes } = req.body;
       if (!title || !days || !date2?.hijriDay || !date2?.hijriMonth || !date2?.hijriYear || !date2?.gregorianDay || !date2?.gregorianMonth || !date2?.gregorianYear) {
         return res.status(400).json({ message: "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629" });
       }
+      console.log("\u{1F4E5} Data passed to createEvent:", {
+        title,
+        days,
+        userId: req.user.id,
+        hijriDay: date2.hijriDay,
+        hijriMonth: date2.hijriMonth,
+        hijriYear: date2.hijriYear,
+        gregorianDay: date2.gregorianDay,
+        gregorianMonth: date2.gregorianMonth,
+        gregorianYear: date2.gregorianYear,
+        eventTime: time2,
+        isHijri: date2.isHijri,
+        description: notes
+      });
       const event = await storage.createEvent({
         title,
         days,
         userId: req.user.id,
-        hijri_day: date2.hijriDay,
-        hijri_month: date2.hijriMonth,
-        hijri_year: date2.hijriYear,
-        gregorian_day: date2.gregorianDay,
-        gregorian_month: date2.gregorianMonth,
-        gregorian_year: date2.gregorianYear,
-        event_time: time2
-        // مثال: "14:30"
+        hijriDay: date2.hijriDay,
+        hijriMonth: date2.hijriMonth,
+        hijriYear: date2.hijriYear,
+        gregorianDay: date2.gregorianDay,
+        gregorianMonth: date2.gregorianMonth,
+        gregorianYear: date2.gregorianYear,
+        eventTime: time2,
+        isHijri: date2.isHijri,
+        description: notes
       });
       res.status(201).json(event);
     } catch (error) {
