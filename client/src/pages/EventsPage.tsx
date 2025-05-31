@@ -128,9 +128,11 @@ export default function EventsPage() {
   const confirmDeleteAllEvents = () => {
     deleteAllEventsMutation.mutate();
   };
-
-  const activeEvents = events?.filter((event) => event.days > 0) || [];
-  const pastEvents = events?.filter((event) => event.days <= 0) || [];
+const filteredEvents = events?.filter((event) =>
+  event.title.toLowerCase().includes(searchQuery.toLowerCase())
+) || [];
+  const activeEvents = filteredEvents.filter(event => event.days > 0);
+const pastEvents = filteredEvents.filter(event => event.days <= 0);
 
   return (
     <div className="container max-w-md mx-auto p-4 mb-24 text-right">
