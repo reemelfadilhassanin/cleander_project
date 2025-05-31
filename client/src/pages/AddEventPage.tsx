@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import HijriDate from 'hijri-date/lib/safe';
 import {
   ArrowRight,
@@ -52,28 +53,6 @@ const todayHijri = new HijriDate();
 const const_CURRENT_HIJRI_YEAR_PLACEHOLDER = todayHijri.getFullYear();
 const const_CURRENT_HIJRI_MONTH_PLACEHOLDER = todayHijri.getMonth() + 1;
 const const_CURRENT_HIJRI_DAY_PLACEHOLDER = todayHijri.getDate();
-function getDaysInHijriMonth(month: number, year: number): number {
-  // month 1-12, year هجري كامل
-  // نستخدم HijriDate لتحديد أول يوم من الشهر التالي ثم نطرح يوم لنحصل على آخر يوم في الشهر الحالي
-  // ملاحظة: مكتبة hijri-date تستخدم 0-indexed للأشهر
-  const startOfMonth = new HijriDate(year, month - 1, 1);
-  let nextMonth;
-  if (month === 12) {
-    nextMonth = new HijriDate(year + 1, 0, 1);
-  } else {
-    nextMonth = new HijriDate(year, month, 1);
-  }
-  // الفرق بين اليوم الأول من الشهر التالي واليوم الأول من الشهر الحالي
-  // لكن HijriDate لا تدعم الفرق بشكل مباشر، لذا نحول للتقويم الميلادي
-  const gregStart = startOfMonth.toGregorian();
-  const gregNext = nextMonth.toGregorian();
-
-  // حساب الفرق بالأيام
-  const diffTime = gregNext.getTime() - gregStart.getTime();
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-  return Math.round(diffDays);
-}
 
 function getHijriMonthName(month: number): string {
   const hijriMonthNames = [
@@ -117,6 +96,9 @@ export default function AddEventPage() {
   const dayParam = searchParams.get('day');
   const monthParam = searchParams.get('month');
   const yearParam = searchParams.get('year');
+
+  // --- Robust Default Date Initialization ---
+  // Use HijriDate to get the current Hijri date for a more accurate default
   const todayHijri = new HijriDate();
   const const_CURRENT_HIJRI_YEAR_PLACEHOLDER = todayHijri.getFullYear();
   const const_CURRENT_HIJRI_MONTH_PLACEHOLDER = todayHijri.getMonth() + 1; // getMonth() is 0-indexed
@@ -194,18 +176,20 @@ export default function AddEventPage() {
   }, []);
 
   // Effect to update max days when selected month/year in dialog changes
- useEffect(() => {
-  try {
-    const days = getDaysInHijriMonth(selectedMonth, selectedYear);
-    setMaxDaysInSelectedMonth(days);
-    if (selectedDay > days) {
-      setSelectedDay(days);
+  useEffect(() => {
+    try {
+      const hijriCalendar = new HijriDate(selectedYear, selectedMonth, 1);
+      const days = hijriCalendar.daysInMonth();
+      setMaxDaysInSelectedMonth(days);
+      // Adjust selectedDay if it exceeds the new max days
+      if (selectedDay > days) {
+        setSelectedDay(days);
+      }
+    } catch (error) {
+      console.error('Error calculating days in Hijri month:', error);
+      setMaxDaysInSelectedMonth(30); // Fallback to 30 days in case of error
     }
-  } catch (error) {
-    console.error('Error calculating days in Hijri month:', error);
-    setMaxDaysInSelectedMonth(30);
-  }
-}, [selectedMonth, selectedYear, selectedDay]);
+  }, [selectedMonth, selectedYear, selectedDay]); // Include selectedDay to re-evaluate adjustment
 
   useEffect(() => {
     if (dayParam && monthParam && yearParam) {
@@ -355,7 +339,9 @@ export default function AddEventPage() {
   };
 
   const handleDateDialogConfirm = () => {
-      form.setValue('date.hijriDay', selectedDay);
+    // This function now updates the main form's state with values from the dialog's state
+    // selectedDay, selectedMonth, selectedYear are always Hijri as per current dialog implementation.
+    form.setValue('date.hijriDay', selectedDay);
     form.setValue('date.hijriMonth', selectedMonth);
     form.setValue('date.hijriYear', selectedYear);
 
