@@ -120,28 +120,28 @@ export default function AddEventPage() {
   const [categories, setCategories] = useState<
     { id: string; name: string; color: string; default?: boolean }[]
   >([]);
- const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   const { toast } = useToast();
 
   const defaultCategory =
     categories.find((cat) => cat.default)?.id ||
     (categories.length > 0 ? categories[0].id : '');
 
- const form = useForm<z.infer<typeof eventSchema>>({
-  resolver: zodResolver(eventSchema),
-  defaultValues: {
-    title: '',
-    category: defaultCategory,
-    date: {
-      hijriDay: initialDay,
-      hijriMonth: initialMonth,
-      hijriYear: initialYear,
+  const form = useForm<z.infer<typeof eventSchema>>({
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      title: '',
+      category: defaultCategory,
+      date: {
+        hijriDay: initialDay,
+        hijriMonth: initialMonth,
+        hijriYear: initialYear,
+      },
+      days: 1,
+      time: '12:00',
+      notes: '',
     },
-    days: 1,
-    time: '12:00',
-    notes: '',
-  },
-});
+  });
   const queryClient = useQueryClient();
   useEffect(() => {
     const fetchCategories = async () => {
@@ -151,6 +151,7 @@ export default function AddEventPage() {
             'Content-Type': 'application/json',
             // Authorization: 'Bearer <your-token>' // أضف التوكن هنا إذا كان API يتطلب توثيق
           },
+          credentials: 'include',
         });
 
         if (!res.ok) {
@@ -158,9 +159,8 @@ export default function AddEventPage() {
         }
 
         const data = await res.json();
-         setCategories(data);
-        setCategoriesLoaded(true); 
-        
+        setCategories(data);
+        setCategoriesLoaded(true);
       } catch (error) {
         console.error('خطأ أثناء جلب الفئات:', error);
       }
