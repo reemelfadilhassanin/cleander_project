@@ -53,6 +53,8 @@ export function setupAuth(app: Express) {
   const sessionSecret =
     process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const sessionSettings: session.SessionOptions = {
     secret: sessionSecret,
     resave: false,
@@ -61,12 +63,15 @@ export function setupAuth(app: Express) {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-  secure: true,         
-  sameSite: 'none',
+      secure: isProduction, // فقط في الإنتاج
+      sameSite: isProduction ? 'none' : 'lax', // none فقط مع secure: true
     },
   };
 
-  app.set('trust proxy', 1);
+  if (isProduction) {
+    app.set('trust proxy', 1); // إذا خلف proxy مثل Heroku أو nginx
+  }
+
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -91,6 +96,7 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -102,6 +108,8 @@ export function setupAuth(app: Express) {
       done(err);
     }
   });
+
+
 
   // Registration endpoint
   app.post('/api/register', async (req, res, next) => {
