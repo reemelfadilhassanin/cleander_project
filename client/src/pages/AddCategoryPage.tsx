@@ -61,12 +61,12 @@ export default function AddCategoryPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/categories', {
+      const response = await fetch('https://cleander-project-server.onrender.com/api/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // إذا كنت تستخدم الجلسات أو الكوكيز
+        credentials: 'include', 
         body: JSON.stringify({
           name: values.name,
           color: values.color,
