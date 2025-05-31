@@ -452,6 +452,7 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
           notes: event.description,
           time: event.eventTime,
           days:  event.days,
+          daysRemaining: days,
           category: event.categoryId || 'uncategorized',
           date: {
             hijri: {

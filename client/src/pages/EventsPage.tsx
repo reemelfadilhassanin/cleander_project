@@ -56,6 +56,7 @@ interface Event {
   id: number;
   title: string;
   days: number;
+  daysRemaining: number;
   date: {
     hijri: EventDate;
     gregorian: EventDate;
@@ -138,8 +139,8 @@ export default function EventsPage() {
         event.title.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-  const activeEvents = filteredEvents.filter((event) => event.days > 0);
-  const pastEvents = filteredEvents.filter((event) => event.days <= 0);
+ const activeEvents = filteredEvents.filter((event) => event.daysRemaining > 0);
+const pastEvents = filteredEvents.filter((event) => event.daysRemaining <= 0);
 
   return (
     <div className="container max-w-md mx-auto p-4 mb-24 text-right">
@@ -377,7 +378,8 @@ function EventCard({ event }: { event: Event }) {
   };
 
   const styles = colorMap[color] || colorMap['blue'];
-  const isPastEvent = event.days <= 0;
+  const isPastEvent = event.daysRemaining <= 0;
+
 
   // عرض مختلف للمناسبات المنتهية (مع دائرة مطفية)
   if (isPastEvent) {
@@ -390,7 +392,7 @@ function EventCard({ event }: { event: Event }) {
           <div className="bg-gray-100 text-gray-500 flex flex-col items-center justify-center p-3 min-w-[80px]">
             <span className="text-xs font-medium mb-1">قبل</span>
             <span className="text-xl font-bold">
-              {toArabicNumerals(Math.abs(event.days))}
+              {toArabicNumerals(Math.abs(event.daysRemaining))}
             </span>
             <span className="text-xs font-medium">يوم</span>
           </div>
@@ -445,7 +447,7 @@ function EventCard({ event }: { event: Event }) {
           <span className="text-xs font-medium mb-1">متبقي</span>
           <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
             <span className="text-2xl font-bold">
-              {toArabicNumerals(event.days)}
+              {toArabicNumerals(event.daysRemaining)}
             </span>
           </div>
           <span className="text-xs font-medium mt-1">يوم</span>
