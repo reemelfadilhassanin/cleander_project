@@ -4,7 +4,7 @@ import express, {
   type NextFunction,
 } from 'express';
 import { registerRoutes } from './routes';
-import { serveStatic, log } from './vite'; // فقط serveStatic مباشرة
+import { setupVite, serveStatic, log } from './vite';
 import 'dotenv/config';
 import cors from 'cors';
 import { setupAuth } from './auth';
@@ -20,7 +20,7 @@ const allowedOrigins = [
 
 console.log('✅ Allowed CORS Origins:', allowedOrigins);
 
-// ✅ CORS middleware
+// ✅ CORS middleware (only use this - no custom headers!)
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -79,9 +79,8 @@ app.use((req, res, next) => {
   // ✅ Register API routes
   server = await registerRoutes(app);
 
-  // ✅ Serve frontend
+  // ✅ Serve frontend based on environment
   if (app.get('env') === 'development') {
-    const { setupVite } = await import('./vite.js'); // dynamic import
     await setupVite(app, server);
   } else {
     serveStatic(app);
