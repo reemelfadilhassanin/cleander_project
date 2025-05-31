@@ -1,5 +1,5 @@
 import { categories, type Category, type InsertCategory } from '@shared/schema';
-
+import { and, or, eq, isNull } from 'drizzle-orm';
 import {
   users,
   events,
@@ -22,7 +22,10 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   // Category operations
   getUserCategories(userId: number): Promise<Category[]>;
-  getCategoryById(categoryId: number): Promise<Category | undefined>;
+  getCategoryById(
+    categoryId: number,
+    userId: number
+  ): Promise<Category | undefined>;
 
   createCategory(data: InsertCategory): Promise<Category>;
   updateCategory(
@@ -92,18 +95,41 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
-  async getCategoryById(categoryId: number): Promise<Category | undefined> {
+  async getCategoryById(
+    categoryId: number,
+    userId: number
+  ): Promise<Category | undefined> {
     try {
       const [category] = await db
         .select()
         .from(categories)
-        .where(eq(categories.id, categoryId));
+        .where(
+          and(
+            eq(categories.id, categoryId),
+            or(
+              isNull(categories.userId), // فئة عامة
+              eq(categories.userId, userId) // فئة تخص هذا المستخدم
+            )
+          )
+        );
       return category;
     } catch (error) {
       console.error('خطأ في جلب التصنيف حسب المعرف:', error);
       return undefined;
     }
   }
+  // async getCategoryById(categoryId: number): Promise<Category | undefined> {
+  //   try {
+  //     const [category] = await db
+  //       .select()
+  //       .from(categories)
+  //       .where(eq(categories.id, categoryId));
+  //     return category;
+  //   } catch (error) {
+  //     console.error('خطأ في جلب التصنيف حسب المعرف:', error);
+  //     return undefined;
+  //   }
+  // }
 
   // جلب التصنيفات الخاصة بالمستخدم
   async getUserCategories(userId: number): Promise<Category[]> {
