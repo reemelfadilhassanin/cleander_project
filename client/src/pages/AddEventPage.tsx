@@ -319,7 +319,7 @@ export default function AddEventPage() {
 
     const payloadToSend = {
       title: values.title,
-      category: values.category,
+      categoryId: values.category,
       date: datePayload,
       days: values.days,
       time: values.time,

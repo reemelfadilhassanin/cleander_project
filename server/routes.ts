@@ -483,7 +483,7 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
 
   app.post('/api/events', requireAuth, async (req, res) => {
     try {
-      const { title, days, date, time, notes } = req.body;
+      const { title, days, date, time, notes, categoryId  } = req.body;
 
       if (
         !title ||
@@ -493,7 +493,8 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
         !date?.hijriYear ||
         !date?.gregorianDay ||
         !date?.gregorianMonth ||
-        !date?.gregorianYear
+        !date?.gregorianYear||
+  !categoryId
       ) {
         return res
           .status(400)
@@ -530,6 +531,7 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
         eventTime: time,
         isHijri: date.isHijri,
         description: notes,
+        categoryId,
       });
 
       res.status(201).json(event);
