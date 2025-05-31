@@ -8,6 +8,8 @@
     "outDir": "dist",
     "noEmit": false,
     "moduleResolution": "node",
-    "jsx": "preserve"
+    "jsx": "preserve",
+    // 👇 نحجب هذه الخاصية لتجنب الخطأ
+    "allowImportingTsExtensions": false
   }
 }
