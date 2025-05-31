@@ -1,8 +1,139 @@
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+
+// client/vite.config.ts
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+var __filename, __dirname, vite_config_default;
+var init_vite_config = __esm({
+  "client/vite.config.ts"() {
+    "use strict";
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = dirname(__filename);
+    vite_config_default = defineConfig({
+      base: "./",
+      // ✅ ضروري للإنتاج على Render
+      plugins: [react()],
+      resolve: {
+        alias: {
+          "@": resolve(__dirname, "src"),
+          "@shared": resolve(__dirname, "shared"),
+          "@assets": resolve(__dirname, "attached_assets")
+        }
+      },
+      server: {
+        port: 3e3,
+        proxy: {
+          "/api": "https://cleander-project-server.onrender.com"
+        }
+      },
+      build: {
+        outDir: "dist",
+        emptyOutDir: true
+      }
+    });
+  }
+});
+
+// server/vite.ts
+var vite_exports = {};
+__export(vite_exports, {
+  log: () => log,
+  serveStatic: () => serveStatic,
+  setupVite: () => setupVite
+});
+import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
+import { dirname as dirname2 } from "path";
+import { nanoid } from "nanoid";
+function log(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite(app2, server) {
+  const { createServer: createViteServer, createLogger: createLogger2 } = await import("vite");
+  const viteLogger2 = createLogger2();
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...vite_config_default,
+    configFile: false,
+    customLogger: {
+      ...viteLogger2,
+      error: (msg, options) => {
+        viteLogger2.error(msg, options);
+        process.exit(1);
+      }
+    },
+    server: serverOptions,
+    appType: "custom"
+  });
+  app2.use(vite.middlewares);
+  app2.use("*", async (req, res, next) => {
+    if (req.originalUrl.startsWith("/api")) return next();
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path.resolve(
+        __dirname2,
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+function serveStatic(app2) {
+  const distPath = path.resolve(__dirname2, "public");
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.get("*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api")) return next();
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
+}
+var __filename2, __dirname2, viteLogger;
+var init_vite = __esm({
+  "server/vite.ts"() {
+    "use strict";
+    init_vite_config();
+    __filename2 = fileURLToPath2(import.meta.url);
+    __dirname2 = dirname2(__filename2);
+    viteLogger = createLogger();
+  }
+});
 
 // server/index.ts
 import express2 from "express";
@@ -1346,116 +1477,8 @@ async function registerRoutes(app2) {
   return createServer(app2);
 }
 
-// server/vite.ts
-import express from "express";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath as fileURLToPath2 } from "url";
-import { dirname as dirname2 } from "path";
-import { createServer as createViteServer, createLogger } from "vite";
-
-// client/vite.config.ts
-import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = dirname(__filename);
-var vite_config_default = defineConfig({
-  base: "./",
-  // ✅ ضروري للإنتاج على Render
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": resolve(__dirname, "src"),
-      "@shared": resolve(__dirname, "shared"),
-      "@assets": resolve(__dirname, "attached_assets")
-    }
-  },
-  server: {
-    port: 3e3,
-    proxy: {
-      "/api": "https://cleander-project-server.onrender.com"
-    }
-  },
-  build: {
-    outDir: "dist",
-    emptyOutDir: true
-  }
-});
-
-// server/vite.ts
-import { nanoid } from "nanoid";
-var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = dirname2(__filename2);
-var viteLogger = createLogger();
-function log(message, source = "express") {
-  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-async function setupVite(app2, server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...vite_config_default,
-    configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      }
-    },
-    server: serverOptions,
-    appType: "custom"
-  });
-  app2.use(vite.middlewares);
-  app2.use("*", async (req, res, next) => {
-    if (req.originalUrl.startsWith("/api")) return next();
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path.resolve(
-        __dirname2,
-        "..",
-        "client",
-        "index.html"
-      );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
-function serveStatic(app2) {
-  const distPath = path.resolve(__dirname2, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-  app2.use(express.static(distPath));
-  app2.get("*", (req, res, next) => {
-    if (req.originalUrl.startsWith("/api")) return next();
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
-}
-
 // server/index.ts
+init_vite();
 import "dotenv/config";
 import cors from "cors";
 var app = express2();
@@ -1511,7 +1534,8 @@ app.use((req, res, next) => {
   let server;
   server = await registerRoutes(app);
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    const { setupVite: setupVite2 } = await Promise.resolve().then(() => (init_vite(), vite_exports));
+    await setupVite2(app, server);
   } else {
     serveStatic(app);
   }

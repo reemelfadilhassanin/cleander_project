@@ -12,7 +12,7 @@ import { nanoid } from 'nanoid';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const viteLogger = createLogger();
+
 
 export function log(message: string, source = 'express') {
   const formattedTime = new Date().toLocaleTimeString('en-US', {
