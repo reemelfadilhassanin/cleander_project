@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { type Server } from 'http';
-import viteConfig from '../client/vite.config';
+
 import { nanoid } from 'nanoid';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +27,8 @@ export async function setupVite(app: Express, server: Server) {
   const { createServer: createViteServer, createLogger } = await import('vite');
   const viteLogger = createLogger();
 
-  const viteConfig = (await import('../client/vite.config')).default; // 👈 هذا هو التعديل المهم
+  // ✅ استيراد ديناميكي لـ vite.config.ts
+  const viteConfig = (await import('../client/vite.config.ts')).default;
 
   const serverOptions = {
     middlewareMode: true,
