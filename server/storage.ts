@@ -1,3 +1,5 @@
+import { categories, type Category, type InsertCategory } from '@shared/schema';
+
 import {
   users,
   events,
@@ -13,14 +15,17 @@ import connectPg from 'connect-pg-simple';
 import { db } from './db';
 import { pool } from './db';
 import { eq, desc, sql } from 'drizzle-orm';
-import {
-  type InsertEvent,
-} from '@shared/schema';
-
+import { type InsertEvent } from '@shared/schema';
 
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
+  // Category operations
+getUserCategories(userId: number): Promise<Category[]>;
+createCategory(data: InsertCategory): Promise<Category>;
+updateCategory(categoryId: number, updateData: Partial<InsertCategory>): Promise<Category>;
+deleteCategory(categoryId: number): Promise<void>;
+
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -36,7 +41,11 @@ export interface IStorage {
   unlockUserAccount(userId: number): Promise<boolean>;
 
   // Password and verification operations
-  setResetToken(email: string, token: string, expiryDate: Date): Promise<boolean>;
+  setResetToken(
+    email: string,
+    token: string,
+    expiryDate: Date
+  ): Promise<boolean>;
   getUserByResetToken(token: string): Promise<User | undefined>;
   updateUserPassword(userId: number, newPassword: string): Promise<boolean>;
   clearResetToken(userId: number): Promise<boolean>;
@@ -53,7 +62,10 @@ export interface IStorage {
 
   // System settings
   getSystemSettings(): Promise<SystemSettings | undefined>;
-  updateSystemSettings(settings: Partial<InsertSystemSettings>, updatedBy: number): Promise<boolean>;
+  updateSystemSettings(
+    settings: Partial<InsertSystemSettings>,
+    updatedBy: number
+  ): Promise<boolean>;
   setMaintenanceMode(
     enabled: boolean,
     message: string | undefined | null,
@@ -75,15 +87,68 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
-async createEvent(eventData: InsertEvent): Promise<Event> {
-  try {
-    const [event] = await db.insert(events).values(eventData).returning();
-    return event;
-  } catch (error) {
-    console.error('خطأ في إنشاء المناسبة:', error);
-    throw error;
+  // جلب التصنيفات الخاصة بالمستخدم
+  async getUserCategories(userId: number): Promise<Category[]> {
+    try {
+      return await db
+        .select()
+        .from(categories)
+        .where(eq(categories.userId, userId))
+        .orderBy(desc(categories.id));
+    } catch (error) {
+      console.error('خطأ في جلب تصنيفات المستخدم:', error);
+      return [];
+    }
   }
-}
+
+  // إنشاء تصنيف جديد
+  async createCategory(data: InsertCategory): Promise<Category> {
+    try {
+      const [category] = await db.insert(categories).values(data).returning();
+      return category;
+    } catch (error) {
+      console.error('خطأ في إنشاء التصنيف:', error);
+      throw error;
+    }
+  }
+
+  // تحديث تصنيف موجود
+  async updateCategory(
+    categoryId: number,
+    updateData: Partial<InsertCategory>
+  ): Promise<Category> {
+    try {
+      const [updatedCategory] = await db
+        .update(categories)
+        .set(updateData)
+        .where(eq(categories.id, categoryId))
+        .returning();
+      return updatedCategory;
+    } catch (error) {
+      console.error('خطأ في تحديث التصنيف:', error);
+      throw error;
+    }
+  }
+
+  // حذف تصنيف
+  async deleteCategory(categoryId: number): Promise<void> {
+    try {
+      await db.delete(categories).where(eq(categories.id, categoryId));
+    } catch (error) {
+      console.error('خطأ في حذف التصنيف:', error);
+      throw error;
+    }
+  }
+
+  async createEvent(eventData: InsertEvent): Promise<Event> {
+    try {
+      const [event] = await db.insert(events).values(eventData).returning();
+      return event;
+    } catch (error) {
+      console.error('خطأ في إنشاء المناسبة:', error);
+      throw error;
+    }
+  }
 
   async getUser(id: number): Promise<User | undefined> {
     try {
@@ -111,29 +176,34 @@ async createEvent(eventData: InsertEvent): Promise<Event> {
     }
   }
   async deleteEvent(eventId: number): Promise<boolean> {
-  try {
-    const result = await db.delete(events).where(eq(events.id, eventId)).returning({ id: events.id });
-    return result.length > 0;
-  } catch (error) {
-    console.error('خطأ في حذف المناسبة:', error);
-    return false;
+    try {
+      const result = await db
+        .delete(events)
+        .where(eq(events.id, eventId))
+        .returning({ id: events.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error('خطأ في حذف المناسبة:', error);
+      return false;
+    }
   }
-}
 
-async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-  try {
-    const [updated] = await db
-      .update(events)
-      .set(updateData)
-      .where(eq(events.id, eventId))
-      .returning();
-    return updated;
-  } catch (error) {
-    console.error('خطأ في تعديل المناسبة:', error);
-    return undefined;
+  async updateEvent(
+    eventId: number,
+    updateData: Partial<InsertEvent>
+  ): Promise<Event | undefined> {
+    try {
+      const [updated] = await db
+        .update(events)
+        .set(updateData)
+        .where(eq(events.id, eventId))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error('خطأ في تعديل المناسبة:', error);
+      return undefined;
+    }
   }
-}
-
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
@@ -156,7 +226,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
         .where(eq(users.email, email));
       return user;
     } catch (error) {
-      console.error('خطأ في الحصول على المستخدم بواسطة البريد الإلكتروني:', error);
+      console.error(
+        'خطأ في الحصول على المستخدم بواسطة البريد الإلكتروني:',
+        error
+      );
       return undefined;
     }
   }
@@ -190,7 +263,11 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async setResetToken(email: string, token: string, expiryDate: Date): Promise<boolean> {
+  async setResetToken(
+    email: string,
+    token: string,
+    expiryDate: Date
+  ): Promise<boolean> {
     try {
       const formattedDate = expiryDate.toISOString();
       const result = await db
@@ -208,7 +285,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
   async getUserByResetToken(token: string): Promise<User | undefined> {
     try {
       const today = new Date();
-      const [user] = await db.select().from(users).where(eq(users.resetToken, token));
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.resetToken, token));
       if (user && user.resetTokenExpiry) {
         const expiryDate = new Date(user.resetTokenExpiry);
         if (expiryDate > today) return user;
@@ -220,7 +300,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async updateUserPassword(userId: number, newPassword: string): Promise<boolean> {
+  async updateUserPassword(
+    userId: number,
+    newPassword: string
+  ): Promise<boolean> {
     try {
       const result = await db
         .update(users)
@@ -248,7 +331,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async updateUser(userId: number, userData: Partial<Omit<InsertUser, 'password'>>): Promise<boolean> {
+  async updateUser(
+    userId: number,
+    userData: Partial<Omit<InsertUser, 'password'>>
+  ): Promise<boolean> {
     try {
       const result = await db
         .update(users)
@@ -332,7 +418,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
 
   async getEventById(eventId: number): Promise<Event | undefined> {
     try {
-      const [event] = await db.select().from(events).where(eq(events.id, eventId));
+      const [event] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, eventId));
       return event;
     } catch (error) {
       console.error('خطأ في استرجاع المناسبة:', error);
@@ -342,10 +431,7 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
 
   async getAllEvents(): Promise<Event[]> {
     try {
-      return await db
-        .select()
-        .from(events)
-        .orderBy(desc(events.createdAt));
+      return await db.select().from(events).orderBy(desc(events.createdAt));
     } catch (error) {
       console.error('خطأ في استرجاع جميع المناسبات:', error);
       return [];
@@ -366,7 +452,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async updateSystemSettings(settings: Partial<InsertSystemSettings>, updatedBy: number): Promise<boolean> {
+  async updateSystemSettings(
+    settings: Partial<InsertSystemSettings>,
+    updatedBy: number
+  ): Promise<boolean> {
     try {
       const currentSettings = await this.getSystemSettings();
       if (currentSettings) {
@@ -405,7 +494,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async updateTermsOfService(content: string, updatedBy: number): Promise<boolean> {
+  async updateTermsOfService(
+    content: string,
+    updatedBy: number
+  ): Promise<boolean> {
     try {
       return this.updateSystemSettings({ termsOfService: content }, updatedBy);
     } catch (error) {
@@ -414,7 +506,10 @@ async updateEvent(eventId: number, updateData: Partial<InsertEvent>): Promise<Ev
     }
   }
 
-  async updatePrivacyPolicy(content: string, updatedBy: number): Promise<boolean> {
+  async updatePrivacyPolicy(
+    content: string,
+    updatedBy: number
+  ): Promise<boolean> {
     try {
       return this.updateSystemSettings({ privacyPolicy: content }, updatedBy);
     } catch (error) {

@@ -281,18 +281,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // --- قائمة التصنيفات ---
-  app.get('/api/categories', (req, res) => {
-    const categories = [
-      { id: 'all', name: 'الكل', default: true },
-      { id: '1', name: 'أعياد', color: 'green' },
-      { id: '2', name: 'مناسبات شخصية', color: 'purple' },
-      { id: '3', name: 'مواعيد طبية', color: 'red' },
-      { id: '4', name: 'أعمال', color: 'orange' },
-      { id: '5', name: 'سفر', color: 'teal' },
-    ];
+  // // --- قائمة التصنيفات ---
+  // app.get('/api/categories', (req, res) => {
+  //   const categories = [
+  //     { id: 'all', name: 'الكل', default: true },
+  //     { id: '1', name: 'أعياد', color: 'green' },
+  //     { id: '2', name: 'مناسبات شخصية', color: 'purple' },
+  //     { id: '3', name: 'مواعيد طبية', color: 'red' },
+  //     { id: '4', name: 'أعمال', color: 'orange' },
+  //     { id: '5', name: 'سفر', color: 'teal' },
+  //   ];
+  //   res.json(categories);
+  // });
+  app.get('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const categories = await storage.getUserCategories(req.user.id);
     res.json(categories);
-  });
+  } catch (error) {
+    console.error('خطأ في جلب التصنيفات:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب التصنيفات' });
+  }
+});
+
 
   // --- نموذج بيانات المناسبة ---
   interface Event {
@@ -311,6 +321,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     color: string;
     categoryId: string;
   }
+  app.post('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const { name, color } = req.body;
+    if (!name || !color) {
+      return res.status(400).json({ message: 'الاسم واللون مطلوبان' });
+    }
+
+    const newCategory = await storage.createCategory({
+      name,
+      color,
+      userId: req.user.id,
+    });
+
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('خطأ في إنشاء التصنيف:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء التصنيف' });
+  }
+});
+app.put('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: 'معرف التصنيف غير صالح' });
+    }
+
+    const updateData = req.body;
+
+    const updatedCategory = await storage.updateCategory(categoryId, updateData);
+    res.json(updatedCategory);
+  } catch (error) {
+    console.error('خطأ في تعديل التصنيف:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء تعديل التصنيف' });
+  }
+});
+app.delete('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: 'معرف التصنيف غير صالح' });
+    }
+
+    await storage.deleteCategory(categoryId);
+    res.json({ message: 'تم حذف التصنيف بنجاح' });
+  } catch (error) {
+    console.error('خطأ في حذف التصنيف:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء حذف التصنيف' });
+  }
+});
+
 
   // --- بيانات مناسبات افتراضية ---
   // const defaultEvents: Event[] = [
