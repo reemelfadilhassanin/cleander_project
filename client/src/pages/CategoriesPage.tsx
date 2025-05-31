@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { PlusSquare, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useCategories, Category } from '@/context/CategoryContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +15,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Color map to translate color names to Tailwind classes
+export type Category = {
+  id: number;
+  name: string;
+  color: string;
+  default?: boolean;
+};
+
+// Tailwind color maps
 const colorMap: Record<string, string> = {
   red: 'bg-red-500 hover:bg-red-600',
   green: 'bg-green-500 hover:bg-green-600',
@@ -28,23 +34,63 @@ const colorMap: Record<string, string> = {
   teal: 'bg-teal-500 hover:bg-teal-600',
 };
 
-// Text color based on background color
 const textColorMap: Record<string, string> = {
   yellow: 'text-black',
-  default: 'text-white'
+  default: 'text-white',
 };
 
 export default function CategoriesPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { categories, deleteCategory } = useCategories();
-  
+
+  const [categories, setCategories] = useState<Category[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
-  const handleEditCategory = (category: Category) => {
-    // Navigate to edit page with category id
-    navigate(`/edit-category/${category.id}`);
+  // ✅ جلب الأقسام من السيرفر
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('https://cleander-project-server.onrender.com/api/categories', {
+        credentials: 'include',
+      });
+
+      if (!res.ok) throw new Error('فشل في جلب الأقسام');
+
+      const data = await res.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('خطأ في جلب الأقسام:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحميل الأقسام',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 🗑️ حذف القسم
+  const deleteCategory = async (id: number) => {
+    try {
+      const res = await fetch(`https://cleander-project-server.onrender.com/api/categories/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!res.ok) throw new Error('فشل في حذف القسم');
+
+      setCategories(prev => prev.filter(c => c.id !== id));
+      toast({
+        title: 'تم الحذف',
+        description: `تم حذف القسم بنجاح`,
+      });
+    } catch (error) {
+      console.error('خطأ في الحذف:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء حذف القسم',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDeleteClick = (category: Category) => {
@@ -54,18 +100,19 @@ export default function CategoriesPage() {
 
   const confirmDelete = () => {
     if (categoryToDelete) {
-      // Delete the category
       deleteCategory(categoryToDelete.id);
-      
-      toast({
-        title: "تم حذف القسم",
-        description: `تم حذف قسم ${categoryToDelete.name} بنجاح`,
-      });
-      
       setCategoryToDelete(null);
       setDeleteDialogOpen(false);
     }
   };
+
+  const handleEditCategory = (category: Category) => {
+    navigate(`/edit-category/${category.id}`);
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   return (
     <div className="container mx-auto p-4 mb-16" dir="rtl">
@@ -79,7 +126,7 @@ export default function CategoriesPage() {
           إضافة قسم
         </Button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((category) => (
           <Card
@@ -96,7 +143,7 @@ export default function CategoriesPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="absolute top-2 left-2 flex space-x-2">
                   <Button
                     size="icon"
@@ -122,7 +169,7 @@ export default function CategoriesPage() {
           </Card>
         ))}
       </div>
-      
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -133,7 +180,7 @@ export default function CategoriesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse justify-start gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-500 hover:bg-red-600"
             >
