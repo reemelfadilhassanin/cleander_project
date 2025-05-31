@@ -22,9 +22,12 @@ export function log(message: string, source = 'express') {
 }
 
 // فقط داخل هذه الدالة يتم استيراد vite واستخدامه
+
 export async function setupVite(app: Express, server: Server) {
   const { createServer: createViteServer, createLogger } = await import('vite');
   const viteLogger = createLogger();
+
+  const viteConfig = (await import('../client/vite.config')).default; // 👈 هذا هو التعديل المهم
 
   const serverOptions = {
     middlewareMode: true,
