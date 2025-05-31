@@ -1,7 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "include": ["server/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "client",
+    "client/**/*",
+    "server/vite.ts",
+    "**/*.test.ts"
+  ],
   "compilerOptions": {
     "module": "CommonJS",
     "target": "ES6",
@@ -9,7 +17,8 @@
     "noEmit": false,
     "moduleResolution": "node",
     "jsx": "preserve",
-    // 👇 نحجب هذه الخاصية لتجنب الخطأ
-    "allowImportingTsExtensions": false
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   }
 }
