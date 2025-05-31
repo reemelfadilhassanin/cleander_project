@@ -5,14 +5,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, X } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useCategories } from "@/context/CategoryContext";
+import { ArrowRight } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useCategories } from '@/context/CategoryContext';
 
-// Define form schema
+// ✅ مخطط التحقق
 const categorySchema = z.object({
   name: z.string().min(2, 'اسم القسم يجب أن يكون على الأقل حرفين'),
   color: z.string().min(1, 'يجب اختيار لون للقسم'),
@@ -20,7 +27,6 @@ const categorySchema = z.object({
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
-// Predefined colors with descriptions
 const colorOptions = [
   { value: 'red', label: 'أحمر', bg: 'bg-red-500', text: 'text-white' },
   { value: 'green', label: 'أخضر', bg: 'bg-green-500', text: 'text-white' },
@@ -28,7 +34,12 @@ const colorOptions = [
   { value: 'yellow', label: 'أصفر', bg: 'bg-yellow-500', text: 'text-black' },
   { value: 'purple', label: 'بنفسجي', bg: 'bg-purple-500', text: 'text-white' },
   { value: 'pink', label: 'وردي', bg: 'bg-pink-500', text: 'text-white' },
-  { value: 'orange', label: 'برتقالي', bg: 'bg-orange-500', text: 'text-white' },
+  {
+    value: 'orange',
+    label: 'برتقالي',
+    bg: 'bg-orange-500',
+    text: 'text-white',
+  },
   { value: 'teal', label: 'فيروزي', bg: 'bg-teal-500', text: 'text-white' },
 ];
 
@@ -38,7 +49,6 @@ export default function AddCategoryPage() {
   const [, navigate] = useLocation();
   const { addCategory } = useCategories();
 
-  // Initialize form
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -51,27 +61,38 @@ export default function AddCategoryPage() {
     setIsSubmitting(true);
 
     try {
-      // Add the new category using the context
-      addCategory({
-        name: values.name,
-        color: values.color
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // إذا كنت تستخدم الجلسات أو الكوكيز
+        body: JSON.stringify({
+          name: values.name,
+          color: values.color,
+        }),
       });
-      
-      // Simulate delay for better user experience
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+
+      if (!response.ok) {
+        throw new Error('فشل في إضافة القسم');
+      }
+
+      const newCategory = await response.json();
+
+      // أضف القسم إلى الحالة المحلية
+      addCategory(newCategory);
+
       toast({
-        title: "تم إضافة القسم بنجاح",
+        title: 'تم إضافة القسم بنجاح',
         description: `تم إضافة قسم ${values.name} بنجاح`,
       });
-      
-      // Navigate back to categories
+
       navigate('/categories');
     } catch (error) {
       toast({
-        title: "حدث خطأ",
-        description: "لم نتمكن من إضافة القسم، يرجى المحاولة مرة أخرى",
-        variant: "destructive",
+        title: 'حدث خطأ',
+        description: 'لم نتمكن من إضافة القسم، يرجى المحاولة مرة أخرى',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -90,12 +111,12 @@ export default function AddCategoryPage() {
           العودة للأقسام
         </Button>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle className="text-center">إضافة قسم جديد</CardTitle>
         </CardHeader>
-        
+
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -106,13 +127,17 @@ export default function AddCategoryPage() {
                   <FormItem>
                     <FormLabel>اسم القسم</FormLabel>
                     <FormControl>
-                      <Input placeholder="أدخل اسم القسم" {...field} className="text-right" />
+                      <Input
+                        placeholder="أدخل اسم القسم"
+                        {...field}
+                        className="text-right"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="color"
@@ -141,7 +166,9 @@ export default function AddCategoryPage() {
                                   <span className="text-lg">✓</span>
                                 )}
                               </div>
-                              <p className="text-center text-xs mt-1">{color.label}</p>
+                              <p className="text-center text-xs mt-1">
+                                {color.label}
+                              </p>
                             </FormLabel>
                           </FormItem>
                         ))}
@@ -151,18 +178,18 @@ export default function AddCategoryPage() {
                   </FormItem>
                 )}
               />
-              
+
               <div className="flex gap-3 pt-2">
-                <Button 
-                  type="submit" 
-                  className="flex-1 bg-green-600 hover:bg-green-700" 
+                <Button
+                  type="submit"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'جاري الإضافة...' : 'إضافة القسم'}
                 </Button>
-                <Button 
-                  type="button" 
-                  className="flex-1" 
+                <Button
+                  type="button"
+                  className="flex-1"
                   variant="outline"
                   onClick={() => navigate('/categories')}
                 >
