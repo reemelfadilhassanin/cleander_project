@@ -21,10 +21,15 @@ const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // Category operations
-getUserCategories(userId: number): Promise<Category[]>;
-createCategory(data: InsertCategory): Promise<Category>;
-updateCategory(categoryId: number, updateData: Partial<InsertCategory>): Promise<Category>;
-deleteCategory(categoryId: number): Promise<void>;
+  getUserCategories(userId: number): Promise<Category[]>;
+  getCategoryById(categoryId: number): Promise<Category | undefined>;
+
+  createCategory(data: InsertCategory): Promise<Category>;
+  updateCategory(
+    categoryId: number,
+    updateData: Partial<InsertCategory>
+  ): Promise<Category>;
+  deleteCategory(categoryId: number): Promise<void>;
 
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -87,6 +92,19 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
+  async getCategoryById(categoryId: number): Promise<Category | undefined> {
+    try {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.id, categoryId));
+      return category;
+    } catch (error) {
+      console.error('خطأ في جلب التصنيف حسب المعرف:', error);
+      return undefined;
+    }
+  }
+
   // جلب التصنيفات الخاصة بالمستخدم
   async getUserCategories(userId: number): Promise<Category[]> {
     try {

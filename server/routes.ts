@@ -293,6 +293,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   ];
   //   res.json(categories);
   // });
+  app.get('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: 'معرف التصنيف غير صالح' });
+    }
+
+    const category = await storage.getCategoryById(categoryId);
+
+    if (!category || category.userId !== req.user.id) {
+      return res.status(404).json({ message: 'التصنيف غير موجود' });
+    }
+
+    res.json(category);
+  } catch (error) {
+    console.error('خطأ في جلب التصنيف:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب التصنيف' });
+  }
+});
+
   app.get('/api/categories', requireAuth, async (req, res) => {
   try {
     const categories = await storage.getUserCategories(req.user.id);
