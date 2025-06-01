@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hijriToGregorian } from 'hijri-converter';
+import { hijriToGregorian, gregorianToHijri } from 'hijri-converter';
+
+const getDaysInHijriMonth = (hMonth: number, hYear: number) => {
+  const start = hijriToGregorian(hYear, hMonth, 1);
+  const nextMonth = hMonth === 12 ? 1 : hMonth + 1;
+  const nextYear = hMonth === 12 ? hYear + 1 : hYear;
+  const end = hijriToGregorian(nextYear, nextMonth, 1);
+
+  const startDate = new Date(start.gy, start.gm - 1, start.gd);
+  const endDate = new Date(end.gy, end.gm - 1, end.gd);
+
+  const diffTime = endDate.getTime() - startDate.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+};
 
 interface DatePickerCalendarProps {
   initialMonth: number;
@@ -56,9 +70,11 @@ export default function DatePickerCalendar({
         'ديسمبر',
       ];
 
-  const dayNames = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
-  const hijriMonthLengths = [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29];
+
+  if (isHijri) return getDaysInHijriMonth(month, year);
+
 
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) return hijriMonthLengths[month - 1] || 30;
@@ -74,7 +90,8 @@ export default function DatePickerCalendar({
     } else {
       day = new Date(year, month - 1, 1).getDay();
     }
-    return (day + 6) % 7;
+    return new Date(gy, gm - 1, gd).getDay();
+
   };
 
   const daysInMonth = getDaysInMonth(month, year, isHijri);

@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import HijriDate from 'hijri-date/lib/safe';
+
 import {
   ArrowRight,
   Calendar,
@@ -471,27 +472,31 @@ export default function AddEventPage() {
                           {isHijri ? 'عرض ميلادي' : 'عرض هجري'}
                         </Button>
                       </div>
-                    <div
-  className="flex items-center justify-between border border-gray-300 rounded-md p-2.5 cursor-pointer hover:border-blue-400 text-sm"
-  onClick={() => setIsDateDialogOpen(true)}
->
-  <span>
-    {isHijri
-      ? `${form.getValues().date.hijriDay} ${getHijriMonthName(form.getValues().date.hijriMonth)} ${form.getValues().date.hijriYear} هـ`
-      : new HijriDate(
-          form.getValues().date.hijriYear,
-          form.getValues().date.hijriMonth - 1,
-          form.getValues().date.hijriDay
-        )
-          .toGregorian()
-          .toLocaleDateString('ar-SA-u-nu-latn', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          }) + ' م'}
-  </span>
-  <Calendar className="h-4 w-4 text-gray-500" />
-</div>
+                      <div
+                        className="flex items-center justify-between border border-gray-300 rounded-md p-2.5 cursor-pointer hover:border-blue-400 text-sm"
+                        onClick={() => setIsDateDialogOpen(true)}
+                      >
+                        <span>
+                          {isHijri
+                            ? `${
+                                form.getValues().date.hijriDay
+                              } ${getHijriMonthName(
+                                form.getValues().date.hijriMonth
+                              )} ${form.getValues().date.hijriYear} هـ`
+                            : new HijriDate(
+                                form.getValues().date.hijriYear,
+                                form.getValues().date.hijriMonth - 1,
+                                form.getValues().date.hijriDay
+                              )
+                                .toGregorian()
+                                .toLocaleDateString('ar-SA-u-nu-latn', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                }) + ' م'}
+                        </span>
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                      </div>
                       {form.formState.errors.date?.hijriDay && (
                         <FormMessage>
                           {form.formState.errors.date.hijriDay.message}
