@@ -20,7 +20,9 @@ export default function DatePickerCalendar({
 }: DatePickerCalendarProps) {
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
-  const [selectedDate, setSelectedDate] = useState<number | undefined>(selectedDay);
+  const [selectedDate, setSelectedDate] = useState<number | undefined>(
+    selectedDay
+  );
 
   useEffect(() => {
     setSelectedDate(selectedDay);
@@ -28,16 +30,43 @@ export default function DatePickerCalendar({
 
   const monthNames = isHijri
     ? [
-        'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى',
-        'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال',
-        'ذو القعدة', 'ذو الحجة',
+        'محرم',
+        'صفر',
+        'ربيع الأول',
+        'ربيع الثاني',
+        'جمادى الأولى',
+        'جمادى الآخرة',
+        'رجب',
+        'شعبان',
+        'رمضان',
+        'شوال',
+        'ذو القعدة',
+        'ذو الحجة',
       ]
     : [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+        'يناير',
+        'فبراير',
+        'مارس',
+        'أبريل',
+        'مايو',
+        'يونيو',
+        'يوليو',
+        'أغسطس',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر',
       ];
 
-  const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const dayNames = [
+    'الأحد',
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+  ];
 
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) {
@@ -49,24 +78,34 @@ export default function DatePickerCalendar({
     return new Date(year, month, 0).getDate();
   };
 
- const getFirstDayOfWeek = (month: number, year: number, isHijri: boolean): number => {
-  if (isHijri) {
-    const date = new UmmalquraCalendar();
-    date.umYear = year;
-    date.umMonth = month - 1; // شهر ذو الحجة هو 12، لذا month - 1 هو 11
-    date.umDay = 1;
-    console.log(
-      `DatePickerCalendar - getFirstDayOfWeek for Hijri <span class="math-inline">\{year\}\-</span>{month}-1:`,
-      date.gregorianDate.toString(), // ما هو التاريخ الميلادي المقابل لـ 1 ذو الحجة؟
-      `Day index: ${date.gregorianDate.getDay()}` // ما هو رقم يوم الأسبوع؟ (الجمعة = 5)
-    );
-    return date.gregorianDate.getDay();
-  }
-  return new Date(year, month - 1, 1).getDay();
-};
+  // داخل DatePickerCalendar.tsx
+  const getFirstDayOfWeek = (
+    month: number,
+    year: number,
+    isHijri: boolean
+  ): number => {
+    if (isHijri) {
+      const date = new UmmalquraCalendar();
+      date.umYear = year;
+      date.umMonth = month - 1; // شهر ذو الحجة هو 12، لذا month - 1 هو 11
+      date.umDay = 1;
+      console.log(
+        `DatePickerCalendar - getFirstDayOfWeek for Hijri ${year}-${month}-1:`,
+        date.gregorianDate.toString(), // ما هو التاريخ الميلادي المقابل لـ 1 ذو الحجة؟
+        `Day index: ${date.gregorianDate.getDay()}` // ما هو رقم يوم الأسبوع؟ (الجمعة = 5)
+      );
+      return date.gregorianDate.getDay();
+    }
+    return new Date(year, month - 1, 1).getDay();
+  };
 
-// يمكنك إضافة console.log مشابه في getWeekDayForDate
-  const getWeekDayForDate = (day: number, month: number, year: number, isHijri: boolean): number => {
+  // يمكنك إضافة console.log مشابه في getWeekDayForDate
+  const getWeekDayForDate = (
+    day: number,
+    month: number,
+    year: number,
+    isHijri: boolean
+  ): number => {
     if (isHijri) {
       const date = new UmmalquraCalendar();
       date.umYear = year;
@@ -115,20 +154,27 @@ export default function DatePickerCalendar({
   };
 
   const weeks = generateDaysGrid();
-  const selectedWeekDay = selectedDate != null
-    ? getWeekDayForDate(selectedDate, month, year, isHijri)
-    : null;
+  const selectedWeekDay =
+    selectedDate != null
+      ? getWeekDayForDate(selectedDate, month, year, isHijri)
+      : null;
 
   return (
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="bg-emerald-700 text-white p-4">
         <div className="flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-800">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-emerald-800"
+          >
             <Edit2 className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-bold text-center">
             {selectedDate
-              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${monthNames[month - 1]}`
+              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${
+                  monthNames[month - 1]
+                }`
               : 'اختيار التاريخ'}
           </h2>
         </div>
