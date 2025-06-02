@@ -14,7 +14,7 @@ const getDaysInHijriMonth = (hMonth: number, hYear: number) => {
   const endDate = new Date(end.gy, end.gm - 1, end.gd);
 
   const diffTime = endDate.getTime() - startDate.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 interface DatePickerCalendarProps {
@@ -85,8 +85,10 @@ export default function DatePickerCalendar({
   if (isHijri) return getDaysInHijriMonth(month, year);
 
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
-    if (isHijri) return hijriMonthLengths[month - 1] || 30;
-    return new Date(year, month, 0).getDate();
+    if (isHijri) {
+      return getDaysInHijriMonth(month, year); // ← استخدم الدالة الدقيقة
+    }
+    return new Date(year, month, 0).getDate(); // الميلادي
   };
 
   const getFirstDayOfWeek = (
@@ -94,16 +96,12 @@ export default function DatePickerCalendar({
     year: number,
     isHijri: boolean
   ): number => {
-    let date: Date;
-
     if (isHijri) {
       const { gy, gm, gd } = hijriToGregorian(year, month, 1);
-      date = new Date(gy, gm - 1, gd);
+      return new Date(gy, gm - 1, gd).getDay();
     } else {
-      date = new Date(year, month - 1, 1);
+      return new Date(year, month - 1, 1).getDay();
     }
-
-    return date.getDay(); // 0 = الأحد
   };
 
   const daysInMonth = getDaysInMonth(month, year, isHijri);
