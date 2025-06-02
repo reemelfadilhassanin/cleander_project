@@ -34,7 +34,9 @@ export default function DatePickerCalendar({
 }: DatePickerCalendarProps) {
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
-  const [selectedDate, setSelectedDate] = useState<number | undefined>(selectedDay);
+  const [selectedDate, setSelectedDate] = useState<number | undefined>(
+    selectedDay
+  );
 
   useEffect(() => {
     setSelectedDate(selectedDay);
@@ -70,28 +72,38 @@ export default function DatePickerCalendar({
         'ديسمبر',
       ];
 
-const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-
+  const dayNames = [
+    'الأحد',
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+  ];
 
   if (isHijri) return getDaysInHijriMonth(month, year);
-
 
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) return hijriMonthLengths[month - 1] || 30;
     return new Date(year, month, 0).getDate();
   };
 
-  const getFirstDayOfWeek = (month: number, year: number, isHijri: boolean): number => {
-    let day;
+  const getFirstDayOfWeek = (
+    month: number,
+    year: number,
+    isHijri: boolean
+  ): number => {
+    let date: Date;
+
     if (isHijri) {
       const { gy, gm, gd } = hijriToGregorian(year, month, 1);
-      const gDate = new Date(gy, gm - 1, gd);
-      day = gDate.getDay();
+      date = new Date(gy, gm - 1, gd);
     } else {
-      day = new Date(year, month - 1, 1).getDay();
+      date = new Date(year, month - 1, 1);
     }
-    return new Date(gy, gm - 1, gd).getDay();
 
+    return date.getDay(); // 0 = الأحد
   };
 
   const daysInMonth = getDaysInMonth(month, year, isHijri);
@@ -142,12 +154,18 @@ const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="bg-emerald-700 text-white p-4">
         <div className="flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-800">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-emerald-800"
+          >
             <Edit2 className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-bold text-center">
             {selectedDate
-              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${monthNames[month - 1]}`
+              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${
+                  monthNames[month - 1]
+                }`
               : 'اختيار التاريخ'}
           </h2>
         </div>
@@ -178,39 +196,38 @@ const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
         <div className="space-y-1">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 gap-1">
-          {week.map((day, dayIndex) => {
-  let gDay: number | null = null;
-  if (day !== null && isHijri) {
-    const g = hijriToGregorian(year, month, day);
-    const gDate = new Date(g.gy, g.gm - 1, g.gd);
-    gDay = gDate.getDate(); // اليوم الميلادي المقابل
-  }
+              {week.map((day, dayIndex) => {
+                let gDay: number | null = null;
+                if (day !== null && isHijri) {
+                  const g = hijriToGregorian(year, month, day);
+                  const gDate = new Date(g.gy, g.gm - 1, g.gd);
+                  gDay = gDate.getDate(); // اليوم الميلادي المقابل
+                }
 
-  return (
-    <div key={dayIndex} className="text-center">
-      {day !== null && (
-        <div className="flex flex-col items-center">
-          {gDay !== null && (
-            <span className="text-xs text-gray-400">{gDay}</span>
-          )}
-          <button
-            type="button"
-            className={`w-10 h-10 rounded-full flex items-center justify-center 
+                return (
+                  <div key={dayIndex} className="text-center">
+                    {day !== null && (
+                      <div className="flex flex-col items-center">
+                        {gDay !== null && (
+                          <span className="text-xs text-gray-400">{gDay}</span>
+                        )}
+                        <button
+                          type="button"
+                          className={`w-10 h-10 rounded-full flex items-center justify-center 
               ${
                 day === selectedDate
                   ? 'bg-emerald-700 text-white'
                   : 'hover:bg-gray-100'
               }`}
-            onClick={() => handleSelectDay(day)}
-          >
-            {day}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-})}
-
+                          onClick={() => handleSelectDay(day)}
+                        >
+                          {day}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
