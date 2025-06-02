@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { hijriToGregorian } from 'hijri-converter';
 import { hijriToGregorian, gregorianToHijri } from 'hijri-converter';
 
 const getDaysInHijriMonth = (hMonth: number, hYear: number) => {
@@ -82,13 +81,11 @@ export default function DatePickerCalendar({
     'السبت',
   ];
 
-  if (isHijri) return getDaysInHijriMonth(month, year);
-
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) {
-      return getDaysInHijriMonth(month, year); // ← استخدم الدالة الدقيقة
+      return getDaysInHijriMonth(month, year);
     }
-    return new Date(year, month, 0).getDate(); // الميلادي
+    return new Date(year, month, 0).getDate();
   };
 
   const getFirstDayOfWeek = (
@@ -199,7 +196,7 @@ export default function DatePickerCalendar({
                 if (day !== null && isHijri) {
                   const g = hijriToGregorian(year, month, day);
                   const gDate = new Date(g.gy, g.gm - 1, g.gd);
-                  gDay = gDate.getDate(); // اليوم الميلادي المقابل
+                  gDay = gDate.getDate();
                 }
 
                 return (
@@ -211,12 +208,9 @@ export default function DatePickerCalendar({
                         )}
                         <button
                           type="button"
-                          className={`w-10 h-10 rounded-full flex items-center justify-center 
-              ${
-                day === selectedDate
-                  ? 'bg-emerald-700 text-white'
-                  : 'hover:bg-gray-100'
-              }`}
+                          className={\`w-10 h-10 rounded-full flex items-center justify-center \${day === selectedDate
+                            ? 'bg-emerald-700 text-white'
+                            : 'hover:bg-gray-100'}\`}
                           onClick={() => handleSelectDay(day)}
                         >
                           {day}
