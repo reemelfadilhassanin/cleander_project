@@ -1,20 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { hijriToGregorian, gregorianToHijri } from 'hijri-converter';
-
-const getDaysInHijriMonth = (hMonth: number, hYear: number) => {
-  const start = hijriToGregorian(hYear, hMonth, 1);
-  const nextMonth = hMonth === 12 ? 1 : hMonth + 1;
-  const nextYear = hMonth === 12 ? hYear + 1 : hYear;
-  const end = hijriToGregorian(nextYear, nextMonth, 1);
-
-  const startDate = new Date(start.gy, start.gm - 1, start.gd);
-  const endDate = new Date(end.gy, end.gm - 1, end.gd);
-
-  const diffTime = endDate.getTime() - startDate.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
+import UmmalquraCalendar from 'ummalqura-calendar';
 
 interface DatePickerCalendarProps {
   initialMonth: number;
@@ -33,9 +20,7 @@ export default function DatePickerCalendar({
 }: DatePickerCalendarProps) {
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
-  const [selectedDate, setSelectedDate] = useState<number | undefined>(
-    selectedDay
-  );
+  const [selectedDate, setSelectedDate] = useState<number | undefined>(selectedDay);
 
   useEffect(() => {
     setSelectedDate(selectedDay);
@@ -43,62 +28,47 @@ export default function DatePickerCalendar({
 
   const monthNames = isHijri
     ? [
-        'محرم',
-        'صفر',
-        'ربيع الأول',
-        'ربيع الثاني',
-        'جمادى الأولى',
-        'جمادى الآخرة',
-        'رجب',
-        'شعبان',
-        'رمضان',
-        'شوال',
-        'ذو القعدة',
-        'ذو الحجة',
+        'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى',
+        'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال',
+        'ذو القعدة', 'ذو الحجة',
       ]
     : [
-        'يناير',
-        'فبراير',
-        'مارس',
-        'أبريل',
-        'مايو',
-        'يونيو',
-        'يوليو',
-        'أغسطس',
-        'سبتمبر',
-        'أكتوبر',
-        'نوفمبر',
-        'ديسمبر',
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
       ];
 
-  const dayNames = [
-    'الأحد',
-    'الاثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت',
-  ];
+  const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) {
-      return getDaysInHijriMonth(month, year);
+      const date = new UmmalquraCalendar();
+      date.umYear = year;
+      date.umMonth = month - 1;
+      return date.getDaysInMonth();
     }
     return new Date(year, month, 0).getDate();
   };
 
-  const getFirstDayOfWeek = (
-    month: number,
-    year: number,
-    isHijri: boolean
-  ): number => {
+  const getFirstDayOfWeek = (month: number, year: number, isHijri: boolean): number => {
     if (isHijri) {
-      const { gy, gm, gd } = hijriToGregorian(year, month, 1);
-      return new Date(gy, gm - 1, gd).getDay();
-    } else {
-      return new Date(year, month - 1, 1).getDay();
+      const date = new UmmalquraCalendar();
+      date.umYear = year;
+      date.umMonth = month - 1;
+      date.umDay = 1;
+      return date.gregorianDate.getDay(); // Sunday = 0
     }
+    return new Date(year, month - 1, 1).getDay();
+  };
+
+  const getWeekDayForDate = (day: number, month: number, year: number, isHijri: boolean): number => {
+    if (isHijri) {
+      const date = new UmmalquraCalendar();
+      date.umYear = year;
+      date.umMonth = month - 1;
+      date.umDay = day;
+      return date.gregorianDate.getDay();
+    }
+    return new Date(year, month - 1, day).getDay();
   };
 
   const daysInMonth = getDaysInMonth(month, year, isHijri);
@@ -110,7 +80,6 @@ export default function DatePickerCalendar({
       const day = i - firstDay + 1;
       return day > 0 && day <= daysInMonth ? day : null;
     });
-
     return Array.from({ length: totalCells / 7 }, (_, i) =>
       daysArray.slice(i * 7, i * 7 + 7)
     );
@@ -140,27 +109,20 @@ export default function DatePickerCalendar({
   };
 
   const weeks = generateDaysGrid();
-  const selectedWeekDay =
-    selectedDate != null
-      ? (getFirstDayOfWeek(month, year, isHijri) + (selectedDate - 1)) % 7
-      : null;
+  const selectedWeekDay = selectedDate != null
+    ? getWeekDayForDate(selectedDate, month, year, isHijri)
+    : null;
 
   return (
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="bg-emerald-700 text-white p-4">
         <div className="flex justify-between items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-emerald-800"
-          >
+          <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-800">
             <Edit2 className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-bold text-center">
             {selectedDate
-              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${
-                  monthNames[month - 1]
-                }`
+              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${monthNames[month - 1]}`
               : 'اختيار التاريخ'}
           </h2>
         </div>
@@ -191,35 +153,24 @@ export default function DatePickerCalendar({
         <div className="space-y-1">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 gap-1">
-              {week.map((day, dayIndex) => {
-                let gDay: number | null = null;
-                if (day !== null && isHijri) {
-                  const g = hijriToGregorian(year, month, day);
-                  const gDate = new Date(g.gy, g.gm - 1, g.gd);
-                  gDay = gDate.getDate();
-                }
-
-                return (
-                  <div key={dayIndex} className="text-center">
-                    {day !== null && (
-                      <div className="flex flex-col items-center">
-                        {gDay !== null && (
-                          <span className="text-xs text-gray-400">{gDay}</span>
-                        )}
-                        <button
-                          type="button"
-                          className={\`w-10 h-10 rounded-full flex items-center justify-center \${day === selectedDate
+              {week.map((day, dayIndex) => (
+                <div key={dayIndex} className="text-center">
+                  {day !== null && (
+                    <button
+                      type="button"
+                      className={`w-10 h-10 rounded-full flex items-center justify-center 
+                        ${
+                          day === selectedDate
                             ? 'bg-emerald-700 text-white'
-                            : 'hover:bg-gray-100'}\`}
-                          onClick={() => handleSelectDay(day)}
-                        >
-                          {day}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                            : 'hover:bg-gray-100'
+                        }`}
+                      onClick={() => handleSelectDay(day)}
+                    >
+                      {day}
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </div>
