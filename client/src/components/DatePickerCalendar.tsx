@@ -178,24 +178,39 @@ const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
         <div className="space-y-1">
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 gap-1">
-              {week.map((day, dayIndex) => (
-                <div key={dayIndex} className="text-center">
-                  {day !== null && (
-                    <button
-                      type="button"
-                      className={`w-10 h-10 rounded-full flex items-center justify-center 
-                        ${
-                          day === selectedDate
-                            ? 'bg-emerald-700 text-white'
-                            : 'hover:bg-gray-100'
-                        }`}
-                      onClick={() => handleSelectDay(day)}
-                    >
-                      {day}
-                    </button>
-                  )}
-                </div>
-              ))}
+          {week.map((day, dayIndex) => {
+  let gDay: number | null = null;
+  if (day !== null && isHijri) {
+    const g = hijriToGregorian(year, month, day);
+    const gDate = new Date(g.gy, g.gm - 1, g.gd);
+    gDay = gDate.getDate(); // اليوم الميلادي المقابل
+  }
+
+  return (
+    <div key={dayIndex} className="text-center">
+      {day !== null && (
+        <div className="flex flex-col items-center">
+          {gDay !== null && (
+            <span className="text-xs text-gray-400">{gDay}</span>
+          )}
+          <button
+            type="button"
+            className={`w-10 h-10 rounded-full flex items-center justify-center 
+              ${
+                day === selectedDate
+                  ? 'bg-emerald-700 text-white'
+                  : 'hover:bg-gray-100'
+              }`}
+            onClick={() => handleSelectDay(day)}
+          >
+            {day}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+})}
+
             </div>
           ))}
         </div>
