@@ -6,8 +6,6 @@ import { storage } from './storage';
 import { requireAuth } from './auth';
 import { setupAuth, isAdmin, hashPassword } from './auth';
 import { InsertUser } from '@shared/schema';
-import Hijri from 'hijri-js';
-
 import {
   getHijriMonthName,
   getGregorianMonthName,
@@ -247,34 +245,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hijriDay = dayNum;
         hijriMonth = monthNum;
         hijriYear = yearNum;
-
-        const gDate = Hijri.toGregorian(hijriYear, hijriMonth, hijriDay);
-        const dateObj = new Date(gDate.gy, gDate.gm - 1, gDate.gd);
-
-        gregorianDay = gDate.gd;
-        gregorianMonth = gDate.gm;
-        gregorianYear = gDate.gy;
-        weekDay = dateObj.getDay();
+        const gregorianDate = estimateGregorianFromHijri(
+          dayNum,
+          monthNum,
+          yearNum
+        );
+        gregorianDay = gregorianDate.day;
+        gregorianMonth = gregorianDate.month;
+        gregorianYear = gregorianDate.year;
+        weekDay = gregorianDate.weekDay;
       } else {
         gregorianDay = dayNum;
         gregorianMonth = monthNum;
         gregorianYear = yearNum;
-
-        const hDate = Hijri.fromGregorian(
-          gregorianYear,
-          gregorianMonth,
-          gregorianDay
-        );
-        const dateObj = new Date(
-          gregorianYear,
-          gregorianMonth - 1,
-          gregorianDay
-        );
-
-        hijriDay = hDate.hd;
-        hijriMonth = hDate.hm;
-        hijriYear = hDate.hy;
-        weekDay = dateObj.getDay();
+        weekDay = new Date(yearNum, monthNum - 1, dayNum).getDay();
+        const hijriDate = estimateHijriFromGregorian(dayNum, monthNum, yearNum);
+        hijriDay = hijriDate.day;
+        hijriMonth = hijriDate.month;
+        hijriYear = hijriDate.year;
       }
 
       res.json({
