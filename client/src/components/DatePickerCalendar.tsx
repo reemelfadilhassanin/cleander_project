@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import UmmalquraCalendar from 'ummalqura-calendar';
 
 interface DatePickerCalendarProps {
-  initialMonth: number;
+  initialMonth: number; // 1-12
   initialYear: number;
   isHijri: boolean;
-  onSelectDate: (day: number) => void;
+  onSelectDate: (
+    day: number,
+    month: number,
+    year: number,
+    isHijri: boolean
+  ) => void;
   selectedDay?: number;
 }
 
@@ -20,25 +25,59 @@ export default function DatePickerCalendar({
 }: DatePickerCalendarProps) {
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
-  const [selectedDate, setSelectedDate] = useState<number | undefined>(selectedDay);
+  const [selectedDate, setSelectedDate] = useState<number | undefined>(
+    selectedDay
+  );
 
+  // تحديث الشهر والسنة والاختيار عند تغير الخصائص أو نوع التقويم
   useEffect(() => {
+    setMonth(initialMonth);
+    setYear(initialYear);
     setSelectedDate(selectedDay);
-  }, [selectedDay]);
+  }, [initialMonth, initialYear, selectedDay, isHijri]);
+
+  // أيام الأسبوع تبدأ من السبت (حسب المعتاد في العالم العربي)
+  const dayNames = [
+    'السبت',
+    'الأحد',
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+  ];
 
   const monthNames = isHijri
     ? [
-        'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى',
-        'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال',
-        'ذو القعدة', 'ذو الحجة',
+        'محرم',
+        'صفر',
+        'ربيع الأول',
+        'ربيع الثاني',
+        'جمادى الأولى',
+        'جمادى الآخرة',
+        'رجب',
+        'شعبان',
+        'رمضان',
+        'شوال',
+        'ذو القعدة',
+        'ذو الحجة',
       ]
     : [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+        'يناير',
+        'فبراير',
+        'مارس',
+        'أبريل',
+        'مايو',
+        'يونيو',
+        'يوليو',
+        'أغسطس',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر',
       ];
 
-  const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-
+  // دالة للحصول على عدد أيام الشهر (هجري أو ميلادي)
   const getDaysInMonth = (month: number, year: number, isHijri: boolean) => {
     if (isHijri) {
       const date = new UmmalquraCalendar();
@@ -49,30 +88,47 @@ export default function DatePickerCalendar({
     return new Date(year, month, 0).getDate();
   };
 
-  const getFirstDayOfWeek = (month: number, year: number, isHijri: boolean): number => {
+  // أول يوم في الأسبوع لشهر معين (هجري أو ميلادي)
+  const getFirstDayOfWeek = (
+    month: number,
+    year: number,
+    isHijri: boolean
+  ): number => {
     if (isHijri) {
       const date = new UmmalquraCalendar();
       date.umYear = year;
       date.umMonth = month - 1;
       date.umDay = 1;
-      return date.gregorianDate.getDay(); // Sunday = 0
+      // تحويل يوم الأسبوع ليبدأ من السبت (حسب dayNames)
+      const day = date.gregorianDate.getDay(); // 0=الأحد, 6=السبت
+      return (day + 1) % 7; // تحويل: الأحد(0) => 1، السبت(6) => 0
     }
-    return new Date(year, month - 1, 1).getDay();
+    const day = new Date(year, month - 1, 1).getDay(); // 0=الأحد
+    return (day + 1) % 7; // تعديل بداية الأسبوع إلى السبت
   };
 
-  const getWeekDayForDate = (day: number, month: number, year: number, isHijri: boolean): number => {
+  // الحصول على يوم الأسبوع لتاريخ معين (هجري أو ميلادي)
+  const getWeekDayForDate = (
+    day: number,
+    month: number,
+    year: number,
+    isHijri: boolean
+  ): number => {
     if (isHijri) {
       const date = new UmmalquraCalendar();
       date.umYear = year;
       date.umMonth = month - 1;
       date.umDay = day;
-      return date.gregorianDate.getDay();
+      const dayIndex = date.gregorianDate.getDay();
+      return (dayIndex + 1) % 7;
     }
-    return new Date(year, month - 1, day).getDay();
+    const dayIndex = new Date(year, month - 1, day).getDay();
+    return (dayIndex + 1) % 7;
   };
 
   const daysInMonth = getDaysInMonth(month, year, isHijri);
 
+  // توليد شبكة الأيام مع ملء الفراغات في بداية الأسبوع
   const generateDaysGrid = () => {
     const firstDay = getFirstDayOfWeek(month, year, isHijri);
     const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
@@ -92,6 +148,7 @@ export default function DatePickerCalendar({
     } else {
       setMonth(month - 1);
     }
+    setSelectedDate(undefined); // إلغاء التحديد عند تغير الشهر
   };
 
   const goToNextMonth = () => {
@@ -101,42 +158,50 @@ export default function DatePickerCalendar({
     } else {
       setMonth(month + 1);
     }
+    setSelectedDate(undefined); // إلغاء التحديد عند تغير الشهر
   };
 
   const handleSelectDay = (day: number) => {
     setSelectedDate(day);
-    onSelectDate(day);
+    onSelectDate(day, month, year, isHijri);
   };
 
   const weeks = generateDaysGrid();
-  const selectedWeekDay = selectedDate != null
-    ? getWeekDayForDate(selectedDate, month, year, isHijri)
-    : null;
+  const selectedWeekDay =
+    selectedDate != null
+      ? getWeekDayForDate(selectedDate, month, year, isHijri)
+      : null;
 
   return (
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="bg-emerald-700 text-white p-4">
         <div className="flex justify-between items-center">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-800">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-emerald-800"
+          >
             <Edit2 className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-bold text-center">
             {selectedDate
-              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${monthNames[month - 1]}`
+              ? `${dayNames[selectedWeekDay ?? 0]}, ${selectedDate} ${
+                  monthNames[month - 1]
+                } ${year} ${isHijri ? 'هـ' : 'م'}`
               : 'اختيار التاريخ'}
           </h2>
         </div>
       </div>
 
       <div className="flex justify-between items-center p-3 border-b">
-        <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+        <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center space-x-1 space-x-reverse">
           <span className="font-semibold">{monthNames[month - 1]}</span>
           <span className="font-semibold">{year}</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+        <Button variant="ghost" size="icon" onClick={goToNextMonth}>
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
