@@ -36,6 +36,7 @@ const registerSchema = insertUserSchema
     email: true,
     password: true,
     name: true,
+    isAdmin: z.boolean().optional(), 
   })
   .extend({
     password: z.string().min(6, 'كلمة المرور يجب أن تكون على الأقل 6 أحرف'),

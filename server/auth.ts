@@ -113,41 +113,40 @@ export function setupAuth(app: Express) {
 
   // Registration endpoint
   app.post('/api/register', async (req, res, next) => {
-    const { email, password, name } = req.body;
+  const { email, password, name, isAdmin } = req.body; // ← أضف isAdmin هنا
 
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'يرجى تعبئة جميع الحقول' });
+  if (!email || !password || !name) {
+    return res.status(400).json({ message: 'يرجى تعبئة جميع الحقول' });
+  }
+
+  try {
+    const existingUser = await storage.getUserByEmail(email);
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ message: 'البريد الإلكتروني مستخدم بالفعل' });
     }
 
-    try {
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: 'البريد الإلكتروني مستخدم بالفعل' });
-      }
+    const hashedPassword = await hashPassword(password);
+    const user = await storage.createUser({
+      email,
+      password: hashedPassword,
+      name,
+      isAdmin: !!isAdmin, // ← اجعلها ديناميكية
+      verificationToken: null,
+    });
 
-      const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({
-        email,
-        password: hashedPassword,
-        name,
-        isAdmin: false,
-        
-        verificationToken: null,
-      });
+    const { password: _, ...safeUser } = user;
 
-      const { password: _, ...safeUser } = user;
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        return res.status(201).json(safeUser);
-      });
-    } catch (err) {
-      console.error('Registration error:', err);
-      return res.status(500).json({ message: 'حدث خطأ أثناء التسجيل' });
-    }
-  });
+    req.login(user, (err) => {
+      if (err) return next(err);
+      return res.status(201).json(safeUser);
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    return res.status(500).json({ message: 'حدث خطأ أثناء التسجيل' });
+  }
+});
 
   // Login endpoint
   app.post('/api/login', (req, res, next) => {

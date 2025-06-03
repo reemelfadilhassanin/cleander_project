@@ -84,6 +84,7 @@ const [userName, setUserName] = useState('');
       name: "",
       email: "",
       password: "",
+       isAdmin: false,
     },
   });
   
@@ -169,7 +170,13 @@ const handleRoleChoice = (role: 'admin' | 'user') => {
 
   // Handle registration submission
   const onRegisterSubmit = (values: any) => {
-    registerMutation.mutate(values);
+     const isAdminFromName = values.name.trim().toLowerCase() === 'admin';
+    registerMutation.mutate({
+    name: values.name,
+    email: values.email,
+    password: values.password,
+     isAdmin: isAdminFromName, 
+  });
   };
 
   // If user is already logged in, redirect to home
