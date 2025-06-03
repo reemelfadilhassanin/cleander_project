@@ -20,6 +20,9 @@ import { type InsertEvent } from '@shared/schema';
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
+  getSystemSettings(): Promise<SystemSettings | null>;
+updateTermsOfService(content: string): Promise<boolean>;
+
   // Category operations
   getUserCategories(userId: number): Promise<Category[]>;
   getCategoryById(
@@ -95,6 +98,32 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
+  async getSystemSettings(): Promise<SystemSettings | null> {
+  try {
+    const result = await this.db.query.systemSettings.findFirst();
+    return result ?? null;
+  } catch (err) {
+    console.error('getSystemSettings error:', err);
+    return null;
+  }
+}
+
+async updateTermsOfService(content: string): Promise<boolean> {
+  try {
+    const updated = await this.db
+      .update(this.schema.systemSettings)
+      .set({
+        termsOfService: content,
+        lastUpdated: sql`CURRENT_TIMESTAMP`,
+      })
+      .returning();
+    return updated.length > 0;
+  } catch (err) {
+    console.error('updateTermsOfService error:', err);
+    return false;
+  }
+}
+
   async getCategoryById(
     categoryId: number,
     userId: number

@@ -147,3 +147,38 @@ export function setupAdminRoutes(app: Express) {
       });
   });
 }
+
+app.get('/api/admin/system-settings', async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.status(403).json({ message: 'غير مصرح بالوصول' });
+    }
+
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json(settings);
+    } catch (err) {
+      console.error('Error fetching system settings:', err);
+      res.status(500).json({ message: 'حدث خطأ أثناء جلب إعدادات النظام' });
+    }
+  });
+
+  // Update terms of service
+  app.post('/api/admin/terms-of-service', async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.status(403).json({ message: 'غير مصرح بالوصول' });
+    }
+
+    const { content } = req.body;
+
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ message: 'المحتوى مطلوب ويجب أن يكون نصاً' });
+    }
+
+    try {
+      const updated = await storage.updateTermsOfService(content);
+      res.json({ success: true, updated });
+    } catch (err) {
+      console.error('Error updating terms of service:', err);
+      res.status(500).json({ message: 'حدث خطأ أثناء تحديث شروط الاستخدام' });
+    }
+  });
