@@ -142,23 +142,21 @@ const [userName, setUserName] = useState('');
 
   // Handle login submission
   const onLoginSubmit = (values: any) => {
-    loginMutation.mutate(values, {
-      onError: (error: any) => {
-       
-        toast({
-  title: "خطأ",
-  description: "تعذر تسجيل الدخول. تحقق من بياناتك.",
-  variant: "destructive"
-});
-
-      }
-        onSuccess: (response: any) => {
-      
+  loginMutation.mutate(values, {
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: "تعذر تسجيل الدخول. تحقق من بياناتك.",
+        variant: "destructive"
+      });
+    }, 
+    onSuccess: (response: any) => {
       setUserName(response.user?.name || '');
       setShowRoleSelector(true);
     }
-    });
-  };
+  });
+};
+
 const handleRoleChoice = (role: 'admin' | 'user') => {
   setShowRoleSelector(false);
 
