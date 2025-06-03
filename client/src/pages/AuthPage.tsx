@@ -8,6 +8,8 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { AdminRoleSelector } from '@/components/AdminRoleSelector';
+
 import {
   Card,
   CardContent,
@@ -55,6 +57,9 @@ const resetPasswordSchema = z.object({
 type ForgotPasswordState = 'form' | 'success' | 'reset-form' | 'reset-success';
 
 const AuthPage = () => {
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+const [userName, setUserName] = useState('');
+
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
   const [forgotPasswordState, setForgotPasswordState] = useState<ForgotPasswordState>('form');
@@ -135,82 +140,11 @@ const AuthPage = () => {
     }
   }, [toast, setResetToken, setActiveTab, setForgotPasswordState]);
 
-  // وظيفة التحقق من البريد الإلكتروني
-  // const handleVerifyEmail = async () => {
-  //   if (isSubmittingCode || !verificationCode.trim()) return;
-    
-  //   setIsSubmittingCode(true);
-  //   try {
-  //     const res = await apiRequest("POST", "/api/verify-email", { token: verificationCode });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       toast({
-  //         title: "تم التحقق بنجاح",
-  //         description: data.message || "تم التحقق من بريدك الإلكتروني بنجاح، يمكنك الآن تسجيل الدخول."
-  //       });
-  //       setShowVerifyDialog(false);
-  //       // إعادة تعيين النموذج
-  //       setVerificationCode('');
-  //     } else {
-  //       const data = await res.json();
-  //       toast({
-  //         title: "خطأ",
-  //         description: data.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.",
-  //         variant: "destructive"
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast({
-  //       title: "خطأ",
-  //       description: "حدث خطأ أثناء التحقق. يرجى المحاولة مرة أخرى.",
-  //       variant: "destructive"
-  //     });
-  //   } finally {
-  //     setIsSubmittingCode(false);
-  //   }
-  // };
-  
-  // وظيفة إعادة إرسال رمز التحقق
-  // const handleResendVerification = async () => {
-  //   if (isResendingCode || !userEmail) return;
-    
-  //   setIsResendingCode(true);
-  //   try {
-  //     const res = await apiRequest("POST", "/api/resend-verification-by-email", { email: userEmail });
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       toast({
-  //         title: "تم الإرسال بنجاح",
-  //         description: data.message || "تم إرسال رمز التحقق الجديد. يرجى التحقق من بريدك الإلكتروني."
-  //       });
-  //     } else {
-  //       const data = await res.json();
-  //       toast({
-  //         title: "خطأ",
-  //         description: data.message || "حدث خطأ أثناء إرسال رمز التحقق.",
-  //         variant: "destructive"
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast({
-  //       title: "خطأ",
-  //       description: "حدث خطأ أثناء إرسال رمز التحقق. يرجى المحاولة مرة أخرى.",
-  //       variant: "destructive"
-  //     });
-  //   } finally {
-  //     setIsResendingCode(false);
-  //   }
-  // };
-
   // Handle login submission
   const onLoginSubmit = (values: any) => {
     loginMutation.mutate(values, {
       onError: (error: any) => {
-        // فحص إذا كان الخطأ متعلق بعدم تفعيل البريد الإلكتروني
-        // if (error.response?.status === 403 && error.response?.data?.needVerification) {
-        //   setUserEmail(error.response.data.email || values.email);
-        //   setShowVerifyDialog(true);
-        // }
+       
         toast({
   title: "خطأ",
   description: "تعذر تسجيل الدخول. تحقق من بياناتك.",
@@ -218,8 +152,22 @@ const AuthPage = () => {
 });
 
       }
+        onSuccess: (response: any) => {
+      
+      setUserName(response.user?.name || '');
+      setShowRoleSelector(true);
+    }
     });
   };
+const handleRoleChoice = (role: 'admin' | 'user') => {
+  setShowRoleSelector(false);
+
+  if (role === 'admin') {
+    window.location.href = '/admin/dashboard';
+  } else {
+    window.location.href = '/home'; // عدّل الرابط حسب الحاجة
+  }
+};
 
   // Handle registration submission
   const onRegisterSubmit = (values: any) => {
@@ -336,6 +284,13 @@ const AuthPage = () => {
                     </form>
                   </Form>
                 </TabsContent>
+{showRoleSelector && (
+  <AdminRoleSelector
+    isOpen={showRoleSelector}
+    userName={userName}
+    onRoleSelect={handleRoleChoice}
+  />
+)}
 
                 {/* Register Form */}
                 <TabsContent value="register">
