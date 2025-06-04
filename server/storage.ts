@@ -110,30 +110,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSystemSettings(): Promise<SystemSettings | null> {
-    try {
-      const result = await this.db.query.systemSettings.findFirst();
-      return result ?? null;
-    } catch (err) {
-      console.error('getSystemSettings error:', err);
-      return null;
-    }
+  try {
+    const [settings] = await db.select().from(systemSettings).limit(1);
+    return settings ?? null;
+  } catch (error) {
+    console.error('getSystemSettings error:', error);
+    return null;
   }
+}
 
-  async updateTermsOfService(content: string): Promise<boolean> {
-    try {
-      const updated = await this.db
-        .update(this.schema.systemSettings)
-        .set({
-          termsOfService: content,
-          lastUpdated: sql`CURRENT_TIMESTAMP`,
-        })
-        .returning();
-      return updated.length > 0;
-    } catch (err) {
-      console.error('updateTermsOfService error:', err);
-      return false;
+ async updateTermsOfService(content: string): Promise<boolean> {
+  try {
+    const existing = await db.select().from(systemSettings).limit(1);
+    const now = new Date();
+
+    if (existing.length > 0) {
+      await db
+        .update(systemSettings)
+        .set({ termsOfService: content, lastUpdated: now })
+        .where(eq(systemSettings.id, existing[0].id));
+      return true;
+    } else {
+      await db.insert(systemSettings).values({
+        termsOfService: content,
+        lastUpdated: now,
+      });
+      return true;
     }
+  } catch (error) {
+    console.error('updateTermsOfService error:', error);
+    return false;
   }
+}
+
 
   async getCategoryById(
     categoryId: number,
