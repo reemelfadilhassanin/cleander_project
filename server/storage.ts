@@ -1,7 +1,5 @@
 import { categories, type Category, type InsertCategory } from '@shared/schema';
 import { and, or, eq, isNull } from 'drizzle-orm';
-import { desc } from "drizzle-orm";
-
 import {
   users,
   events,
@@ -16,14 +14,14 @@ import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import { db } from './db';
 import { pool } from './db';
-
+import { eq, desc, sql } from 'drizzle-orm';
 import { type InsertEvent } from '@shared/schema';
 
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getSystemSettings(): Promise<SystemSettings | null>;
-  updateTermsOfService(content: string): Promise<boolean>;
+updateTermsOfService(content: string): Promise<boolean>;
 
   // Category operations
   getUserCategories(userId: number): Promise<Category[]>;
@@ -100,51 +98,31 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
-  async updateMaintenanceMode(enabled: boolean, message?: string) {
-    return db
-      .update(systemSettings)
-      .set({
-        maintenanceMode: enabled,
-        maintenanceMessage: message,
-        updatedAt: new Date(),
-      })
-      .where(eq(systemSettings.id, 1)); // تأكد من استخدام المفتاح المناسب
-  }
-
   async getSystemSettings(): Promise<SystemSettings | null> {
   try {
-    const [settings] = await db.select().from(systemSettings).limit(1);
-    return settings ?? null;
-  } catch (error) {
-    console.error('getSystemSettings error:', error);
+    const result = await this.db.query.systemSettings.findFirst();
+    return result ?? null;
+  } catch (err) {
+    console.error('getSystemSettings error:', err);
     return null;
   }
 }
 
- async updateTermsOfService(content: string): Promise<boolean> {
+async updateTermsOfService(content: string): Promise<boolean> {
   try {
-    const existing = await db.select().from(systemSettings).limit(1);
-    const now = new Date();
-
-    if (existing.length > 0) {
-      await db
-        .update(systemSettings)
-        .set({ termsOfService: content, lastUpdated: now })
-        .where(eq(systemSettings.id, existing[0].id));
-      return true;
-    } else {
-      await db.insert(systemSettings).values({
+    const updated = await this.db
+      .update(this.schema.systemSettings)
+      .set({
         termsOfService: content,
-        lastUpdated: now,
-      });
-      return true;
-    }
-  } catch (error) {
-    console.error('updateTermsOfService error:', error);
+        lastUpdated: sql`CURRENT_TIMESTAMP`,
+      })
+      .returning();
+    return updated.length > 0;
+  } catch (err) {
+    console.error('updateTermsOfService error:', err);
     return false;
   }
 }
-
 
   async getCategoryById(
     categoryId: number,
@@ -526,8 +504,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllEvents(): Promise<Event[]> {
     try {
-     return await this.db.select().from(events).orderBy(desc(events.createdAt));
-
+      return await db.select().from(events).orderBy(desc(events.createdAt));
     } catch (error) {
       console.error('خطأ في استرجاع جميع المناسبات:', error);
       return [];
