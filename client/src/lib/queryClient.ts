@@ -22,7 +22,7 @@ export async function apiRequest(
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // ✅ Always send cookies/session
+    credentials: "include", 
   });
   console.log("Response status", res.status); 
 
