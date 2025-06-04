@@ -608,6 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'حدث خطأ أثناء تسجيل المستخدم' });
     }
   });
+  
 
   // --- تسجيل الدخول ---
   app.post('/api/users/login', async (req, res) => {
@@ -634,6 +635,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error logging in:', error);
       res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول' });
+    }
+  });
+  app.get('/api/my-events', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.id; // متوقع requireAuth يضيف req.user
+      const events = await storage.getEventsByUserId(userId);
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ message: 'خطأ في جلب المناسبات' });
+    }
+  });
+
+  // إضافة مناسبة جديدة
+  app.post('/api/my-events', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { title, date, time, description } = req.body;
+
+      if (!title || !date) {
+        return res.status(400).json({ message: 'العنوان والتاريخ مطلوبان' });
+      }
+
+      // دمج التاريخ والوقت في حقل واحد
+      const dateTime = time ? new Date(`${date}T${time}`) : new Date(date);
+
+      const newEvent = await storage.createEvent({
+        userId,
+        title,
+        date: dateTime,
+        description: description || '',
+      });
+
+      res.status(201).json(newEvent);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      res.status(500).json({ message: 'خطأ في إضافة المناسبة' });
     }
   });
 

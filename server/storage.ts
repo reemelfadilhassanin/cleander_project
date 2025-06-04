@@ -21,7 +21,7 @@ const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getSystemSettings(): Promise<SystemSettings | null>;
-updateTermsOfService(content: string): Promise<boolean>;
+  updateTermsOfService(content: string): Promise<boolean>;
 
   // Category operations
   getUserCategories(userId: number): Promise<Category[]>;
@@ -98,31 +98,47 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
-  async getSystemSettings(): Promise<SystemSettings | null> {
-  try {
-    const result = await this.db.query.systemSettings.findFirst();
-    return result ?? null;
-  } catch (err) {
-    console.error('getSystemSettings error:', err);
-    return null;
+  async getEventsByUserId(userId: number): Promise<Event[]> {
+    // هنا استعلام لجلب المناسبات من قاعدة البيانات
+    // مثال باستخدام أي ORM أو query builder
+    return await db.events.findMany({ where: { userId } });
   }
-}
 
-async updateTermsOfService(content: string): Promise<boolean> {
-  try {
-    const updated = await this.db
-      .update(this.schema.systemSettings)
-      .set({
-        termsOfService: content,
-        lastUpdated: sql`CURRENT_TIMESTAMP`,
-      })
-      .returning();
-    return updated.length > 0;
-  } catch (err) {
-    console.error('updateTermsOfService error:', err);
-    return false;
+  async createEvent(eventData: {
+    userId: number;
+    title: string;
+    date: Date;
+    description: string;
+  }): Promise<Event> {
+    // حفظ المناسبة في قاعدة البيانات
+    return await db.events.create({ data: eventData });
   }
-}
+
+  async getSystemSettings(): Promise<SystemSettings | null> {
+    try {
+      const result = await this.db.query.systemSettings.findFirst();
+      return result ?? null;
+    } catch (err) {
+      console.error('getSystemSettings error:', err);
+      return null;
+    }
+  }
+
+  async updateTermsOfService(content: string): Promise<boolean> {
+    try {
+      const updated = await this.db
+        .update(this.schema.systemSettings)
+        .set({
+          termsOfService: content,
+          lastUpdated: sql`CURRENT_TIMESTAMP`,
+        })
+        .returning();
+      return updated.length > 0;
+    } catch (err) {
+      console.error('updateTermsOfService error:', err);
+      return false;
+    }
+  }
 
   async getCategoryById(
     categoryId: number,
