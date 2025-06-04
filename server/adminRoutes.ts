@@ -37,6 +37,26 @@ export function setupAdminRoutes(app: Express) {
       res.status(500).json({ message: 'حدث خطأ أثناء تحديث شروط الاستخدام' });
     }
   });
+  app.post('/api/admin/maintenance-mode', async (req, res) => {
+  if (!req.isAuthenticated() || !req.user.isAdmin) {
+    return res.status(403).json({ message: 'غير مصرح بالوصول' });
+  }
+
+  const { enabled, message } = req.body;
+
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ message: 'قيمة "enabled" مطلوبة ويجب أن تكون منطقية (boolean)' });
+  }
+
+  try {
+    const updated = await storage.updateMaintenanceMode(enabled, message);
+    res.json({ success: true, updated });
+  } catch (err) {
+    console.error('Error updating maintenance mode:', err);
+    res.status(500).json({ message: 'حدث خطأ أثناء تحديث وضع الصيانة' });
+  }
+});
+
   // Get all events with user info
   app.get('/api/admin/events', async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isAdmin) {
