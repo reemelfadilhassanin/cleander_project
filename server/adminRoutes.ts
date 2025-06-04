@@ -106,23 +106,48 @@ export function setupAdminRoutes(app: Express) {
 
   // Get events for a specific user
   app.get('/api/admin/user/:userId/events', async (req, res) => {
-    if (!req.isAuthenticated() || !req.user.isAdmin) {
-      return res.status(403).json({ message: 'غير مصرح بالوصول' });
-    }
+  if (!req.isAuthenticated() || !req.user.isAdmin) {
+    return res.status(403).json({ message: 'غير مصرح بالوصول' });
+  }
 
-    const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) {
-      return res.status(400).json({ message: 'معرف المستخدم غير صالح' });
-    }
+  const userId = parseInt(req.params.userId);
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: 'معرف المستخدم غير صالح' });
+  }
 
-    try {
-      const events = await storage.getUserEvents(userId);
-      res.json(events);
-    } catch (error) {
-      console.error('Error fetching user events:', error);
-      res.status(500).json({ message: 'حدث خطأ أثناء جلب مناسبات المستخدم' });
-    }
-  });
+  try {
+    const rawEvents = await storage.getUserEvents(userId);
+
+    // تحويل المناسبات لتطابق Event interface في الواجهة الأمامية
+    const formattedEvents = rawEvents.map((event: any) => ({
+      id: event.id,
+      title: event.title,
+      notes: event.description || '',
+      days: event.days,
+      time: event.time || event.eventTime || '',
+      category: typeof event.category === 'object' ? event.category.name : event.category,
+      date: {
+        hijri: {
+          day: event.hijriDay,
+          month: event.hijriMonth,
+          year: event.hijriYear,
+          formatted: `${event.hijriDay}-${event.hijriMonth}-${event.hijriYear}`,
+        },
+        gregorian: {
+          day: event.gregorianDay,
+          month: event.gregorianMonth,
+          year: event.gregorianYear,
+          formatted: `${event.gregorianDay}-${event.gregorianMonth}-${event.gregorianYear}`,
+        },
+      },
+    }));
+
+    res.json(formattedEvents);
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب مناسبات المستخدم' });
+  }
+});
 
   // Lock a user account
   app.post('/api/admin/user/:userId/lock', (req, res) => {
