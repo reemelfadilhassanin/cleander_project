@@ -56,17 +56,20 @@ export default function AdminEventsPage() {
     }
   };
 
-  // استعلام لجلب كل المناسبات من واجهة API الإدارة
- const { data: allEvents, isLoading: isEventsLoading } = useQuery<Event[]>({
+ const { data: allEvents, isLoading: isEventsLoading, error } = useQuery<Event[]>({
   queryKey: ["admin-events"],
   queryFn: async () => {
     const res = await fetch("https://cleander-project-server.onrender.com/api/admin/events", {
       method: "GET",
-      credentials: "include",
+      credentials: "include", // إرسال الكوكي مع الطلب
     });
+
     if (!res.ok) {
-      throw new Error("فشل في جلب المناسبات");
+      const text = await res.text();
+      console.error("فشل الجلب:", res.status, text);
+      throw new Error("حدث خطأ أثناء جلب جميع المناسبات");
     }
+
     return res.json();
   },
   enabled: !!user?.isAdmin,

@@ -1,14 +1,31 @@
-import { useState, useEffect } from "react";
-import { Link, useParams, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Search, Clock, Sun, Info, CheckCircle, X, ChevronsUp } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Link, useParams, useLocation } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ArrowLeft,
+  Calendar,
+  Search,
+  Clock,
+  Sun,
+  Info,
+  CheckCircle,
+  X,
+  ChevronsUp,
+} from 'lucide-react';
 
 interface EventDate {
   day: number;
@@ -25,16 +42,16 @@ interface Event {
     hijri: EventDate;
     gregorian: EventDate;
   };
-  time: string;
-  category: string;
-  notes?: string;
+  time: string; // بصيغة "14:00" مثلاً
+  category: string; // اسم التصنيف مثل "أعياد"
+  notes?: string; // هذا يجب أن يكون مساويًا لـ description من الـ backend
 }
 
 export default function AdminUserEventsPage() {
   const { user } = useAuth();
   const params = useParams();
   const [, navigate] = useLocation();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const userId = params.userId;
 
   // استعلام لجلب بيانات المستخدم
@@ -46,27 +63,33 @@ export default function AdminUserEventsPage() {
   // استعلام لجلب مناسبات المستخدم
   const { data: userEvents, isLoading: isEventsLoading } = useQuery<Event[]>({
     queryKey: [`/api/admin/user/${userId}/events`],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/user/${userId}/events`);
+      if (!res.ok) throw new Error('فشل في جلب المناسبات');
+      return res.json();
+    },
     enabled: !!userId,
   });
 
   // التأكد من أن المستخدم مدير
   useEffect(() => {
     if (user && !user.isAdmin) {
-      navigate("/");
+      navigate('/');
     }
   }, [user, navigate]);
 
   // فلترة المناسبات حسب البحث
-  const filteredEvents = userEvents?.filter(event => 
-    event.title.includes(searchTerm) || 
-    event.notes?.includes(searchTerm) ||
-    event.date.hijri.formatted.includes(searchTerm) ||
-    event.date.gregorian.formatted.includes(searchTerm)
+  const filteredEvents = userEvents?.filter(
+    (event) =>
+      event.title.includes(searchTerm) ||
+      event.notes?.includes(searchTerm) ||
+      event.date.hijri.formatted.includes(searchTerm) ||
+      event.date.gregorian.formatted.includes(searchTerm)
   );
 
   // تقسيم المناسبات إلى نشطة ومنتهية
-  const activeEvents = filteredEvents?.filter(event => event.days > 0) || [];
-  const pastEvents = filteredEvents?.filter(event => event.days <= 0) || [];
+  const activeEvents = filteredEvents?.filter((event) => event.days > 0) || [];
+  const pastEvents = filteredEvents?.filter((event) => event.days <= 0) || [];
 
   if (!user || !user.isAdmin) {
     return null;
@@ -79,7 +102,9 @@ export default function AdminUserEventsPage() {
           <h1 className="text-3xl font-bold">مناسبات المستخدم</h1>
           {!isUserLoading && userData && (
             <p className="text-gray-500">
-              عرض مناسبات المستخدم: <span className="font-bold">{userData.name}</span> ({userData.email})
+              عرض مناسبات المستخدم:{' '}
+              <span className="font-bold">{userData.name}</span> (
+              {userData.email})
             </p>
           )}
         </div>
@@ -114,13 +139,17 @@ export default function AdminUserEventsPage() {
               <div className="text-right">
                 <p className="text-sm text-gray-500">إجمالي المناسبات</p>
                 <h3 className="text-2xl font-bold">
-                  {isEventsLoading ? <Skeleton className="h-8 w-16" /> : userEvents?.length || 0}
+                  {isEventsLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    userEvents?.length || 0
+                  )}
                 </h3>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex justify-between items-center">
@@ -130,13 +159,17 @@ export default function AdminUserEventsPage() {
               <div className="text-right">
                 <p className="text-sm text-gray-500">المناسبات النشطة</p>
                 <h3 className="text-2xl font-bold">
-                  {isEventsLoading ? <Skeleton className="h-8 w-16" /> : activeEvents.length}
+                  {isEventsLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    activeEvents.length
+                  )}
                 </h3>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex justify-between items-center">
@@ -146,7 +179,11 @@ export default function AdminUserEventsPage() {
               <div className="text-right">
                 <p className="text-sm text-gray-500">المناسبات المنتهية</p>
                 <h3 className="text-2xl font-bold">
-                  {isEventsLoading ? <Skeleton className="h-8 w-16" /> : pastEvents.length}
+                  {isEventsLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    pastEvents.length
+                  )}
                 </h3>
               </div>
             </div>
@@ -192,7 +229,9 @@ export default function AdminUserEventsPage() {
                 <TableBody>
                   {activeEvents.map((event) => (
                     <TableRow key={event.id}>
-                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {event.title}
+                      </TableCell>
                       <TableCell>{event.date.hijri.formatted}</TableCell>
                       <TableCell>{event.date.gregorian.formatted}</TableCell>
                       <TableCell>{event.time}</TableCell>
@@ -205,7 +244,7 @@ export default function AdminUserEventsPage() {
                         <Badge variant="outline">{event.category}</Badge>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
-                        {event.notes || "-"}
+                        {event.notes || '-'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -254,20 +293,30 @@ export default function AdminUserEventsPage() {
                 <TableBody>
                   {pastEvents.map((event) => (
                     <TableRow key={event.id} className="text-gray-500">
-                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {event.title}
+                      </TableCell>
                       <TableCell>{event.date.hijri.formatted}</TableCell>
                       <TableCell>{event.date.gregorian.formatted}</TableCell>
                       <TableCell>{event.time}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-gray-500 border-gray-300">
+                        <Badge
+                          variant="outline"
+                          className="text-gray-500 border-gray-300"
+                        >
                           {Math.abs(event.days)} يوم
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="border-gray-300 text-gray-500">{event.category}</Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-gray-300 text-gray-500"
+                        >
+                          {event.category}
+                        </Badge>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
-                        {event.notes || "-"}
+                        {event.notes || '-'}
                       </TableCell>
                     </TableRow>
                   ))}
