@@ -1,5 +1,7 @@
 import { categories, type Category, type InsertCategory } from '@shared/schema';
 import { and, or, eq, isNull } from 'drizzle-orm';
+import { desc } from "drizzle-orm";
+
 import {
   users,
   events,
@@ -14,7 +16,7 @@ import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import { db } from './db';
 import { pool } from './db';
-import { eq, desc, sql } from 'drizzle-orm';
+
 import { type InsertEvent } from '@shared/schema';
 
 const PostgresSessionStore = connectPg(session);
@@ -524,7 +526,8 @@ export class DatabaseStorage implements IStorage {
 
   async getAllEvents(): Promise<Event[]> {
     try {
-      return await db.select().from(events).orderBy(desc(events.createdAt));
+     return await this.db.select().from(events).orderBy(desc(events.createdAt));
+
     } catch (error) {
       console.error('خطأ في استرجاع جميع المناسبات:', error);
       return [];
