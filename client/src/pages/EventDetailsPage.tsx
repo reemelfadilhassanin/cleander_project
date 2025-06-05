@@ -196,31 +196,48 @@ ${event.notes ? `ملاحظات: ${event.notes}` : ''}
           {/* خيارات التنبيه */}
           <div className="space-y-3">
             <h3 className="text-lg font-bold text-right">إعدادات التنبيه</h3>
-            <RadioGroup
-              value={selectedNotification}
-              onValueChange={handleNotificationChange}
-              className="space-y-2"
-            >
-              <div>
-                <Label htmlFor="none" className="cursor-pointer">
+
+           <RadioGroup
+  value={selectedNotification}
+  onValueChange={handleNotificationChange}
+  className="space-y-2"
+>
+
+              <div className="flex justify-end items-center">
+                <Label
+                  htmlFor="none"
+                  className="cursor-pointer w-28 text-right ml-16"
+                >
                   لا تنبيه
                 </Label>
                 <RadioGroupItem value="none" id="none" />
               </div>
-              <div>
-                <Label htmlFor="email" className="cursor-pointer">
+
+              <div className="flex justify-end items-center">
+                <Label
+                  htmlFor="email"
+                  className="cursor-pointer w-28 text-right ml-16"
+                >
                   بريدك الإلكتروني
                 </Label>
                 <RadioGroupItem value="email" id="email" />
               </div>
-              <div>
-                <Label htmlFor="whatsapp" className="cursor-pointer">
+
+              <div className="flex justify-end items-center">
+                <Label
+                  htmlFor="whatsapp"
+                  className="cursor-pointer w-28 text-right ml-16"
+                >
                   الواتساب
                 </Label>
                 <RadioGroupItem value="whatsapp" id="whatsapp" />
               </div>
-              <div>
-                <Label htmlFor="sms" className="cursor-pointer">
+
+              <div className="flex justify-end items-center">
+                <Label
+                  htmlFor="sms"
+                  className="cursor-pointer w-28 text-right ml-16"
+                >
                   رسالة SMS
                 </Label>
                 <RadioGroupItem value="sms" id="sms" />
