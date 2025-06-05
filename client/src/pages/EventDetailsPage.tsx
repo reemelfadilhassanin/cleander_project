@@ -197,11 +197,12 @@ ${event.notes ? `ملاحظات: ${event.notes}` : ''}
           <div className="space-y-3">
             <h3 className="text-lg font-bold text-right">إعدادات التنبيه</h3>
 
-            <RadioGroup
-              defaultValue="none"
-              onValueChange={handleNotificationChange}
-              className="space-y-2"
-            >
+           <RadioGroup
+  value={selectedNotification}
+  onValueChange={handleNotificationChange}
+  className="space-y-2"
+>
+
               <div className="flex justify-end items-center">
                 <Label
                   htmlFor="none"
