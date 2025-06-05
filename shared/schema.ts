@@ -44,6 +44,7 @@ export const events = pgTable('events', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
+    
   title: text('title').notNull(),
   description: text('description'),
 
@@ -58,6 +59,7 @@ export const events = pgTable('events', {
 categoryId: integer('category_id').references(() => categories.id),
 days: integer('days').default(1).notNull(),
   eventTime: time('event_time'),
+  notificationType: text('notification_type'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 export const categories = pgTable('categories', {
@@ -81,13 +83,21 @@ export const systemSettings = pgTable('system_settings', {
   lastUpdated: timestamp('last_updated').defaultNow().notNull(),
   updatedBy: integer('updated_by').references(() => users.id),
 });
-
-export const insertEventSchema = createInsertSchema(events).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  days: z.number().min(1).max(365).default(1), 
-});
+export const insertEventSchema = createInsertSchema(events)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    days: z.number().min(1).max(365).default(1),
+    notificationType: z.enum(['none', 'email', 'sms', 'whatsapp']).optional().nullable(), // ✅
+  });
+// export const insertEventSchema = createInsertSchema(events).omit({
+//   id: true,
+//   createdAt: true,
+// }).extend({
+//   days: z.number().min(1).max(365).default(1), 
+// });
 
 
 export const insertSystemSettingsSchema = createInsertSchema(

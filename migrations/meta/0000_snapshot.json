@@ -1,5 +1,5 @@
 {
-  "id": "a5314778-08f4-4e74-8003-29a4655cc671",
+  "id": "5d4d696a-bd66-40e2-85c1-f6dc8ec8162d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -150,6 +150,12 @@
         "event_time": {
           "name": "event_time",
           "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notification_type": {
+          "name": "notification_type",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

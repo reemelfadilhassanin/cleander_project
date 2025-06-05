@@ -21,6 +21,7 @@ CREATE TABLE "events" (
 	"category_id" integer,
 	"days" integer DEFAULT 1 NOT NULL,
 	"event_time" time,
+	"notification_type" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

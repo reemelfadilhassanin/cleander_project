@@ -674,6 +674,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'خطأ في إضافة المناسبة' });
     }
   });
+  // جلب إعدادات التنبيه للمستخدم
+app.get('/api/settings/notifications', requireAuth, async (req, res) => {
+  try {
+    const settings = await storage.getUserSettings(req.user.id);
+    res.json(settings || {
+      notificationsEnabled: false,
+      notificationTime: "08:00",
+      notificationType: "push",
+    });
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب إعدادات التنبيه' });
+  }
+});
+
+// تحديث إعدادات التنبيه للمستخدم
+app.put('/api/settings/notifications', requireAuth, async (req, res) => {
+  try {
+    const { notificationsEnabled, notificationTime, notificationType } = req.body;
+
+    if (
+      typeof notificationsEnabled !== 'boolean' ||
+      typeof notificationTime !== 'string' ||
+      typeof notificationType !== 'string'
+    ) {
+      return res.status(400).json({ message: 'بيانات غير صحيحة لإعدادات التنبيه' });
+    }
+
+    const updatedSettings = await storage.updateUserSettings(req.user.id, {
+      notificationsEnabled,
+      notificationTime,
+      notificationType,
+    });
+
+    res.json(updatedSettings);
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء تحديث إعدادات التنبيه' });
+  }
+});
+
 
   // --- إعداد مسارات الادمن المحمية ---
   setupAdminRoutes(app);

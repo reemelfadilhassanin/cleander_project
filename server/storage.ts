@@ -1,5 +1,6 @@
 import { categories, type Category, type InsertCategory } from '@shared/schema';
-import { and, or, eq, isNull } from 'drizzle-orm';
+import { and, or, eq, isNull, desc, sql } from 'drizzle-orm';
+
 import {
   users,
   events,
@@ -14,7 +15,7 @@ import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import { db } from './db';
 import { pool } from './db';
-import { eq, desc, sql } from 'drizzle-orm';
+
 import { type InsertEvent } from '@shared/schema';
 
 const PostgresSessionStore = connectPg(session);
@@ -98,11 +99,13 @@ export class DatabaseStorage implements IStorage {
       tableName: 'user_sessions',
     });
   }
-  async getEventsByUserId(userId: number): Promise<Event[]> {
-    // هنا استعلام لجلب المناسبات من قاعدة البيانات
-    // مثال باستخدام أي ORM أو query builder
-    return await db.events.findMany({ where: { userId } });
-  }
+  async getUserEvents(userId: number): Promise<Event[]> {
+  return await db
+    .select()
+    .from(events)
+    .where(eq(events.userId, userId));
+}
+
 
   async createEvent(eventData: {
     userId: number;
@@ -114,6 +117,7 @@ export class DatabaseStorage implements IStorage {
     return await db.events.create({ data: eventData });
   }
 
+
   async getSystemSettings(): Promise<SystemSettings | null> {
     try {
       const result = await this.db.query.systemSettings.findFirst();
@@ -124,21 +128,23 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateTermsOfService(content: string): Promise<boolean> {
-    try {
-      const updated = await this.db
-        .update(this.schema.systemSettings)
-        .set({
-          termsOfService: content,
-          lastUpdated: sql`CURRENT_TIMESTAMP`,
-        })
-        .returning();
-      return updated.length > 0;
-    } catch (err) {
-      console.error('updateTermsOfService error:', err);
-      return false;
-    }
+  async updateTermsOfService(content: string, updatedBy?: number): Promise<boolean> {
+  try {
+    const updated = await db
+      .update(systemSettings)
+      .set({
+        termsOfService: content,
+        lastUpdated: sql`CURRENT_TIMESTAMP`,
+        ...(updatedBy !== undefined && { updatedBy })
+      })
+      .returning();
+
+    return updated.length > 0;
+  } catch (err) {
+    console.error('updateTermsOfService error:', err);
+    return false;
   }
+}
 
   async getCategoryById(
     categoryId: number,
@@ -229,15 +235,15 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createEvent(eventData: InsertEvent): Promise<Event> {
-    try {
-      const [event] = await db.insert(events).values(eventData).returning();
-      return event;
-    } catch (error) {
-      console.error('خطأ في إنشاء المناسبة:', error);
-      throw error;
-    }
-  }
+  async createEvent(eventData: { userId: number; title: string; date: Date; description: string }): Promise<Event> {
+  const [newEvent] = await db
+    .insert(events)
+    .values(eventData)
+    .returning();
+
+  return newEvent;
+}
+
 
   async getUser(id: number): Promise<User | undefined> {
     try {
